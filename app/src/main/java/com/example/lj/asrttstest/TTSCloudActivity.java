@@ -29,7 +29,6 @@ import com.nuance.dragon.toolkit.util.Logger;
 public class TTSCloudActivity extends AppCompatActivity {
 
     private static final String SAMANTHA = "samantha";
-
     private CloudServices _cloudServices;
     private CloudVocalizer _vocalizer;
     private ConverterPipe<AudioChunk, AudioChunk> _decoder;

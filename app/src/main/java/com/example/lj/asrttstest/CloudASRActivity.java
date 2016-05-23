@@ -61,14 +61,9 @@ public class CloudASRActivity extends AppCompatActivity
     private String             _appLeadSessionId;
     private CalllogSender      _calllogSender;
     private AudioType          _audioType;
+    private TTSService         _ttsService;
 
     private boolean _speexEnabled;
-    private int tmp = 0; //test git
-    private int tmp11 = 0; //test git
-    private int tmp12 = 0; //test git
-    private int tmp13 = 0; //test git
-    private int tmp14 = 0; //test git
-    private int tmp15 = 0; //test git
 
     /**
      * Called when the activity is first created.
@@ -94,6 +89,7 @@ public class CloudASRActivity extends AppCompatActivity
         // by default using opus
         _speexEnabled = speexCheckBox.isChecked();
         _audioType = AudioType.OPUS_WB;
+        _ttsService = new TTSService(getApplicationContext());
 
         reCreateCloudRecognizer();
 
@@ -156,8 +152,10 @@ public class CloudASRActivity extends AppCompatActivity
 //                                Log.d("ssss", appServerResults.toJSON().toString());
                                 java.lang.String topResult = parseResults(result);
 
-                                if(topResult != null)
+                                if(topResult != null) {
                                     resultEditText.setText(topResult);
+//                                    _ttsService.performTTS(getApplicationContext(), topResult);
+                                }
                             }
 
                             @Override
@@ -261,6 +259,7 @@ public class CloudASRActivity extends AppCompatActivity
         if (_cloudServices != null)
             _cloudServices.release();
         _cloudServices = null;
+        _ttsService.close();
     }
 
     private RecogSpec createRecogSpec(String resultModeName) {
