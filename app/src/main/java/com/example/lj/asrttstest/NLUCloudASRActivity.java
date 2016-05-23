@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.format.Time;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -83,7 +84,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                     {
                         // Cloud services initialization
                         _cloudServices = CloudServices.createCloudServices(NLUCloudASRActivity.this,
-                                new CloudConfig(AppInfo.Host, AppInfo.Port, AppInfo.AppId, AppInfo.AppKey, _uniqueId, AudioType.SPEEX_WB, AudioType.SPEEX_WB));
+                                new CloudConfig(AppInfo.Host, AppInfo.Port, AppInfo.AppId, AppInfo.AppKey,
+                                        _uniqueId, AudioType.SPEEX_WB, AudioType.SPEEX_WB));
                         _cloudRecognizer = new CloudRecognizer(_cloudServices);
                         startRecognitionButton.setEnabled(true);
                     }
@@ -143,11 +145,16 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                         if (resultCount == 1)
                         {
                             // 1st result is the transcription
+
+                            Log.d("sss", "1");
+                            Log.d("sss", result.getDictionary().toJSON().toString());
                             showResults(resultEditText, getTranscription(result));
                         }
                         else
                         {
                             // 2nd result is the ADK/NLU action
+                            Log.d("sss", "2");
+                            Log.d("sss", result.getDictionary().toJSON().toString());
                             showResults(resultEditText, result.toJSON().toString());
                         }
                     }
@@ -286,12 +293,15 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     {
         // Customize ASR command spec
         Data.Dictionary customSettings = new  Data.Dictionary();
-        customSettings.put("application", "SampleApp_FULL_1.0.0");
+        customSettings.put("application", "TCL");
         customSettings.put("application_session_id", String.valueOf(UUID.randomUUID()));
         customSettings.put("dictation_language", "eng-USA");
-        customSettings.put("dictation_type", "searchormessaging");
+        //original one
+//        customSettings.put("dictation_type", "searchormessaging");
+        customSettings.put("dictation_type", "nma_dm_main");
 
         RecogSpec retRecogSpec = new RecogSpec("DRAGON_NLU_ASR_CMD", customSettings, "AUDIO_INFO")
+//        RecogSpec retRecogSpec = new RecogSpec("DRAGON_NLU_APPSERVER_CMD", customSettings, "AUDIO_INFO")
         {
             @Override
             public List<DataParam> getDelayedParams()

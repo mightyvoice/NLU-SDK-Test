@@ -5,6 +5,7 @@ package com.example.lj.asrttstest;
  */
 public class AppInfo {
     ////////// Settings for ASR
+    //not working for NLU
 //    public static final String Host = "nmsp.labs.nuance.com";
 //    public static final int Port = 443;
 //    public static final String AppId = "NMDPTRIAL_yujacky_tcl_com20150630145537";

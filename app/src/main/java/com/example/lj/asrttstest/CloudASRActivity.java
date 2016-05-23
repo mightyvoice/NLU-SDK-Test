@@ -3,6 +3,7 @@ package com.example.lj.asrttstest;
 import android.app.Activity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -67,6 +68,7 @@ public class CloudASRActivity extends AppCompatActivity
     private int tmp12 = 0; //test git
     private int tmp13 = 0; //test git
     private int tmp14 = 0; //test git
+    private int tmp15 = 0; //test git
 
     /**
      * Called when the activity is first created.
@@ -149,6 +151,9 @@ public class CloudASRActivity extends AppCompatActivity
                         {
                             @Override
                             public void onResult(CloudRecognitionResult result) {
+                                //get the original jason
+//                                Data.Dictionary appServerResults = result.getDictionary().getDictionary("appserver_results");
+//                                Log.d("ssss", appServerResults.toJSON().toString());
                                 java.lang.String topResult = parseResults(result);
 
                                 if(topResult != null)
@@ -157,7 +162,8 @@ public class CloudASRActivity extends AppCompatActivity
 
                             @Override
                             public void onError(CloudRecognitionError error) {
-                                resultEditText.setText(error.toString());
+//                                resultEditText.setText(error.toString());
+                                resultEditText.setText(error.toJSON().toString());
                             }
 
                             @Override
@@ -302,6 +308,13 @@ public class CloudASRActivity extends AppCompatActivity
 
     private java.lang.String parseResults(CloudRecognitionResult cloudResult)
     {
+        //get the original jason
+//        Data.Dictionary appServerResults = cloudResult.getDictionary().getDictionary("appserver_results");
+//        Log.d("ssss", appServerResults.toJSON().toString());
+//        Data.Dictionary transcriptionDict = appServerResults.getDictionary("payload").getSequence("actions").getDictionary(0);
+
+
+
         Data.Dictionary processedResult = cloudResult.getDictionary();
 
         // Parse results based on the "NVC_ASR_CMD"
