@@ -1,6 +1,8 @@
 package com.example.lj.asrttstest;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -30,6 +32,8 @@ import com.nuance.dragon.toolkit.data.Data;
 import com.nuance.dragon.toolkit.util.Logger;
 import com.nuance.dragon.toolkit.util.WorkerThread;
 
+import org.json.JSONException;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.ObjectInputStream;
@@ -50,6 +54,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private String _uniqueId;
     private Data.Sequence _grammarList, _checksumList;
     private WorkerThread _workerThread;
+    private JsonParser jsonParser;
+    private TTSService _ttsService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +71,10 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         stopRecognitionButton.setEnabled(false);
         cancelButton.setEnabled(false);
         resultModeSpinner.setEnabled(false);
+
+        //my code here for initialization
+        jsonParser = new JsonParser();
+        _ttsService = new TTSService(getApplicationContext());
 
         // First, grammar set-up
         final Handler uiHandler = new Handler();
@@ -146,16 +156,39 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                         {
                             // 1st result is the transcription
 
-                            Log.d("sss", "1");
-                            Log.d("sss", result.getDictionary().toJSON().toString());
-                            showResults(resultEditText, getTranscription(result));
+//                            Log.d("sss", "1");
+//                            try {
+//                                Log.d("sss", result.getDictionary().toJSON().toString(4));
+//                            } catch (JSONException e) {
+//                                e.printStackTrace();
+//                            }
+//                            showResults(resultEditText, getTranscription(result));
                         }
                         else
                         {
                             // 2nd result is the ADK/NLU action
+                            String readableResult = "Error";
+                            try {
+                                readableResult = result.getDictionary().toJSON().toString(4);
+                            }catch (JSONException e){
+                                e.printStackTrace();
+                            }
                             Log.d("sss", "2");
-                            Log.d("sss", result.getDictionary().toJSON().toString());
-                            showResults(resultEditText, result.toJSON().toString());
+                            Log.d("sss", readableResult);
+//                            sendJsonToEmail(readableResult);
+                            String feedback = "I don't know what to do";
+                            String phoneNumber = "Error";
+                            try {
+//                                feedback = jsonParser.getCallingFeedBack(readableResult);
+                                feedback = jsonParser.getConverstationFeedback(readableResult);
+                                phoneNumber = jsonParser.getPhoneNumberFromActionObject();
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }finally {
+                                showResults(resultEditText, feedback);
+                                _ttsService.performTTS(getApplicationContext(), feedback);
+//                                _ttsService.performTTS(getApplicationContext(), "The phone number is "+phoneNumber);
+                            }
                         }
                     }
 
@@ -225,6 +258,14 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         if (_cloudServices != null)
             _cloudServices.release();
         _cloudServices = null;
+    }
+
+    private void sendJsonToEmail(String result){
+        Intent data=new Intent(Intent.ACTION_SENDTO);
+        data.setData(Uri.parse("mailto:rpbloom@gmail.com"));
+        data.putExtra(Intent.EXTRA_SUBJECT, "这是标题");
+        data.putExtra(Intent.EXTRA_TEXT, result);
+        startActivity(data);
     }
 
     private void readDragonData()
