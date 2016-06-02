@@ -13,7 +13,7 @@ public class AppInfo {
 //    public static final byte[] AppKey = toByteArray(AppKeyStr);
 
     //////////Settings for TTS
-    //// it seems that it also works for ASR
+    //// it seems that it also works for ASR and NLU
     public static final String Host = "mtldev02.nuance.com";
     public static final int Port = 443;
     public static final String AppId = "NMT_EVAL_TCL_20150814";

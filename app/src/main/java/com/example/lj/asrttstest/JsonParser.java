@@ -41,7 +41,7 @@ public class JsonParser {
         return curObject;
     }
 
-    private boolean containConversationTag(JSONObject curObject){
+    private boolean ifContainConversationTag(JSONObject curObject){
         try {
             curObject = curObject.getJSONObject("value");
         }catch (JSONException e){
@@ -64,7 +64,7 @@ public class JsonParser {
         return false;
     }
 
-    private boolean containContactTag(){
+    private boolean ifCcontainContactTag(){
         JSONObject curObject = actionObject;
         JSONArray curArray;
         try {
@@ -89,6 +89,7 @@ public class JsonParser {
         }
         return false;
     }
+
     public String getConverstationFeedback(String input) throws JSONException{
         setData(input);
 //        JSONObject curObject = getActionObject(input);
@@ -96,7 +97,7 @@ public class JsonParser {
         JSONArray curArray = curObject.getJSONArray("value");
         for(int i = 0; i < curArray.length(); i++) {
             curObject = curArray.getJSONObject(i);
-            if (containConversationTag(curObject)) {
+            if (ifContainConversationTag(curObject)) {
                 curObject = curObject.getJSONObject("value");
                 curObject = curObject.getJSONObject("text");
                 String result = curObject.getString("value");
@@ -121,5 +122,4 @@ public class JsonParser {
         }
         return "Error";
     }
-
 }

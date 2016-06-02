@@ -154,7 +154,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 
                         if (resultCount == 1)
                         {
-                            // 1st result is the transcription
+                            ///////// 1st result is the transcription
 
 //                            Log.d("sss", "1");
 //                            try {
@@ -166,7 +166,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                         }
                         else
                         {
-                            // 2nd result is the ADK/NLU action
+                            ///////// 2nd result is the ADK/NLU action
                             String readableResult = "Error";
                             try {
                                 readableResult = result.getDictionary().toJSON().toString(4);
@@ -337,12 +337,11 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         customSettings.put("application", "TCL");
         customSettings.put("application_session_id", String.valueOf(UUID.randomUUID()));
         customSettings.put("dictation_language", "eng-USA");
-        //original one
+        //original one from sample app
 //        customSettings.put("dictation_type", "searchormessaging");
         customSettings.put("dictation_type", "nma_dm_main");
 
         RecogSpec retRecogSpec = new RecogSpec("DRAGON_NLU_ASR_CMD", customSettings, "AUDIO_INFO")
-//        RecogSpec retRecogSpec = new RecogSpec("DRAGON_NLU_APPSERVER_CMD", customSettings, "AUDIO_INFO")
         {
             @Override
             public List<DataParam> getDelayedParams()
