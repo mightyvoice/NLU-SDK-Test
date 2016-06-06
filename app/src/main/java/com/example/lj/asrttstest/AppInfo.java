@@ -52,6 +52,8 @@ public class AppInfo {
             (byte) 0x9a, (byte) 0xac, (byte) 0x95, (byte) 0x9e, (byte) 0x15,
             (byte) 0x66};
 
+    public static String IMEInumber;
+
     private static byte[] toByteArray(String appKey)
     {
         String trimmedAppKey = appKey.trim();

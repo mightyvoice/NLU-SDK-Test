@@ -12,6 +12,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.telephony.TelephonyManager;
 
 import com.nuance.dragon.toolkit.audio.AudioChunk;
 import com.nuance.dragon.toolkit.audio.AudioType;
@@ -44,6 +45,7 @@ import java.util.UUID;
 public class NLUCloudASRActivity extends AppCompatActivity {
 
     private int DMA_GRAMMAR_VERSION = 1;
+    private final String TAG = "NLUCloud";
 
     private CloudServices               _cloudServices;
     private CloudRecognizer             _cloudRecognizer;
@@ -77,10 +79,14 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         jsonParser = new JsonParser();
         _ttsService = new TTSService(getApplicationContext());
 
+        //get IMEI number which is the value of uid
+        TelephonyManager telephonyManager = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
+        AppInfo.IMEInumber = telephonyManager.getDeviceId();
+        Log.d(TAG, "IMEI: "+AppInfo.IMEInumber );
+
         //start to upload contact information
         mCloudDataUploadService = new CloudDataUpload(NLUCloudASRActivity.this, resultEditText);
         mCloudDataUploadService.startDataUpload();
-        mCloudDataUploadService.close();
 
         // First, grammar set-up
         final Handler uiHandler = new Handler();
@@ -341,6 +347,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         // Customize ASR command spec
         Data.Dictionary customSettings = new  Data.Dictionary();
         customSettings.put("application", "TCL");
+        //user id for data upload
+        customSettings.put("uid", AppInfo.IMEInumber);
         customSettings.put("application_session_id", String.valueOf(UUID.randomUUID()));
         customSettings.put("dictation_language", "eng-USA");
         //original one from sample app

@@ -2,6 +2,7 @@ package com.example.lj.asrttstest;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -56,7 +57,9 @@ public class CloudDataUpload{
             }
         }
         resultBox.setText("uploading...");
+        Log.d("++++", "start");
         _grammarDepot.uploadServerWordLists(_cloudServices, _listener);
+        Log.d("++++", "upload end");
     }
 
     public void clearDataUploaded(){
@@ -87,12 +90,12 @@ public class CloudDataUpload{
         JSONObject json;
         try{
             json= JSONUtils.readFromStream(_context.getAssets().open(GRAMMAR_DEPOT_FILE));
-//            _grammarDepot=GrammarDepot.createFromJSON(json,new FileManager(_context,"grammardepot"),
-//                    new GrammarDepot.ContentManagerEntry("name",_contactManager),
-//                    new GrammarDepot.ContentManagerEntry("song",_songManager),
-//                    new GrammarDepot.ContentManagerEntry("wakeup",_wakeupManager));
             _grammarDepot=GrammarDepot.createFromJSON(json,new FileManager(_context,"grammardepot"),
-                    new GrammarDepot.ContentManagerEntry("name",_contactManager));
+                    new GrammarDepot.ContentManagerEntry("name",_contactManager),
+                    new GrammarDepot.ContentManagerEntry("song",_songManager),
+                    new GrammarDepot.ContentManagerEntry("wakeup",_wakeupManager));
+//            _grammarDepot=GrammarDepot.createFromJSON(json,new FileManager(_context,"grammardepot"),
+//                    new GrammarDepot.ContentManagerEntry("name",_contactManager));
         }
         catch(IOException e){
             Logger.error(this,"Error reading GrammarDepot file "+GRAMMAR_DEPOT_FILE+": "+e.toString());
@@ -108,6 +111,7 @@ public class CloudDataUpload{
                                                                     AppInfo.Port,
                                                                     AppInfo.AppId,
                                                                     AppInfo.AppKey,
+                                                                    AppInfo.IMEInumber,
                                                                     AudioType.SPEEX_WB,
                                                                     AudioType.SPEEX_WB));
 
@@ -119,8 +123,10 @@ public class CloudDataUpload{
                 if (status == GrammarDepot.GrammarUploadStatus.SUCCESS ||
                         status == GrammarDepot.GrammarUploadStatus.NOTHING_TO_UPLOAD) {
                     resultBox.setText("success");
+                    Log.d("++++", "success");
                 } else {
                     resultBox.setText("error");
+                    Log.d("++++", "error");
                 }
             }
         };

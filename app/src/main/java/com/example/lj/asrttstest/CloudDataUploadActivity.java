@@ -146,12 +146,12 @@ public class CloudDataUploadActivity extends AppCompatActivity {
         JSONObject json;
         try{
             json=JSONUtils.readFromStream(_context.getAssets().open(GRAMMAR_DEPOT_FILE));
-//            _grammarDepot=GrammarDepot.createFromJSON(json,new FileManager(_context,"grammardepot"),
-//                    new GrammarDepot.ContentManagerEntry("name",_contactManager),
-//                    new GrammarDepot.ContentManagerEntry("song",_songManager),
-//                    new GrammarDepot.ContentManagerEntry("wakeup",_wakeupManager));
             _grammarDepot=GrammarDepot.createFromJSON(json,new FileManager(_context,"grammardepot"),
-                    new GrammarDepot.ContentManagerEntry("name",_contactManager));
+                    new GrammarDepot.ContentManagerEntry("name",_contactManager),
+                    new GrammarDepot.ContentManagerEntry("song",_songManager),
+                    new GrammarDepot.ContentManagerEntry("wakeup",_wakeupManager));
+//            _grammarDepot=GrammarDepot.createFromJSON(json,new FileManager(_context,"grammardepot"),
+//                    new GrammarDepot.ContentManagerEntry("name",_contactManager));
 
         }
         catch(IOException e){
@@ -168,6 +168,7 @@ public class CloudDataUploadActivity extends AppCompatActivity {
                         AppInfo.Port,
                         AppInfo.AppId,
                         AppInfo.AppKey,
+                        AppInfo.IMEInumber,
                         AudioType.SPEEX_WB,
                         AudioType.SPEEX_WB));
 

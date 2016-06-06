@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_PERM" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:allowBackup="true"
@@ -29,7 +31,9 @@
         <activity android:name=".CloudASRActivity" />
         <activity android:name=".NLUCloudASRActivity" />
         <activity android:name=".TTSCloudActivity" />
-        <activity android:name=".CloudDataUploadActivity"></activity>
+        <activity android:name=".CloudDataUploadActivity" />
+        <activity android:name=".upload.DataUploadActivity" />
+        <activity android:name=".upload.BaseCloudActivity"></activity>
     </application>
 
 </manifest>
