@@ -28,7 +28,8 @@
         </activity>
         <activity android:name=".CloudASRActivity" />
         <activity android:name=".NLUCloudASRActivity" />
-        <activity android:name=".TTSCloudActivity"></activity>
+        <activity android:name=".TTSCloudActivity" />
+        <activity android:name=".CloudDataUploadActivity"></activity>
     </application>
 
 </manifest>

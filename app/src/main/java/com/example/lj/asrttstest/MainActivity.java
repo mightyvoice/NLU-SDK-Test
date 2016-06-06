@@ -47,7 +47,16 @@ public class MainActivity extends Activity {
             }
         });
 
-
+        final Button cloudDataUploadButton = (Button) findViewById(R.id.cloudDataUploaderButton);
+        cloudDataUploadButton.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                Intent localIntent = new Intent(MainActivity.this, CloudDataUploadActivity.class);
+                MainActivity.this.startActivity(localIntent);
+            }
+        });
 
     }
 }

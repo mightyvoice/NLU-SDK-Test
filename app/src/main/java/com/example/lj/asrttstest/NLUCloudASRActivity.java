@@ -56,6 +56,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private WorkerThread _workerThread;
     private JsonParser jsonParser;
     private TTSService _ttsService;
+    private CloudDataUpload mCloudDataUploadService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,9 +73,14 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         cancelButton.setEnabled(false);
         resultModeSpinner.setEnabled(false);
 
-        //my code here for initialization
+        //my code here for jason parser initialization
         jsonParser = new JsonParser();
         _ttsService = new TTSService(getApplicationContext());
+
+        //start to upload contact information
+        mCloudDataUploadService = new CloudDataUpload(NLUCloudASRActivity.this, resultEditText);
+        mCloudDataUploadService.startDataUpload();
+        mCloudDataUploadService.close();
 
         // First, grammar set-up
         final Handler uiHandler = new Handler();
@@ -175,7 +181,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                             }
                             Log.d("sss", "2");
                             Log.d("sss", readableResult);
-//                            sendJsonToEmail(readableResult);
+                            sendJsonToEmail(readableResult);
                             String feedback = "I don't know what to do";
                             String phoneNumber = "Error";
                             try {
