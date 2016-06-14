@@ -1,7 +1,7 @@
-package com.example.lj.asrttstest;
+package com.example.lj.asrttstest.info;
 
 /**
- * Created by lj on 16/5/9.
+ * Created by lj on 16/6/14.
  */
 public class AppInfo {
     ////////// Settings for ASR
@@ -33,7 +33,6 @@ public class AppInfo {
 //            (byte) 0x58, (byte) 0x83 };
 
     ////The new setting 06-03-2016
-    //still cannot work
     public static final String Host = "mtldev11.nuance.com";
     public static final int Port = 443;
     public static final String AppId = "TCL_TESTING_20160307";

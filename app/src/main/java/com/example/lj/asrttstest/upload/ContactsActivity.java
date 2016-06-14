@@ -7,8 +7,10 @@ import android.support.v7.app.AppCompatActivity;
 import com.example.lj.asrttstest.R;
 import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.ContactInfo;
+import com.nuance.dragon.toolkit.data.Data;
 
 import 	android.content.ContentResolver;
+import android.util.Log;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -16,10 +18,16 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.Hashtable;
+
 public class ContactsActivity extends AppCompatActivity {
     /**
      * Called when the activity is first created.
      */
+    private final static String TAG = "ContactsActivity";
+    private DataUploaderCloudActivity dataUploader;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -27,28 +35,25 @@ public class ContactsActivity extends AppCompatActivity {
 
         getAllContactList();
         try {
-            getAllContactJsonArray();
+            getAllContactJsonArrayAndObject();
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
 
         final EditText resultEditText = (EditText)findViewById(R.id.cloudResultEditText);
-        String allContacts = "";
-        for(int i = 0; i < AllContactInfo.allContactList.size(); i++){
-            allContacts += AllContactInfo.allContactList.get(i).toString();
-        }
-
         try {
-            resultEditText.setText(AllContactInfo.allContactJsonArray.toString(4));
+            resultEditText.setText(AllContactInfo.allContactJsonObject.toString(4));
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
+        dataUploader = new DataUploaderCloudActivity(this);
+        dataUploader.TclUploadData(AllContactInfo.allContactJsonObject, null, null);
     }
 
     private void getAllContactList(){
-
+        AllContactInfo.allContactList = new ArrayList<ContactInfo>();
         ContentResolver cr = getContentResolver();
         Cursor cur = cr.query(ContactsContract.Contacts.CONTENT_URI,
                 null, null, null, null);
@@ -88,12 +93,15 @@ public class ContactsActivity extends AppCompatActivity {
         }
     }
 
-    private void getAllContactJsonArray() throws JSONException {
+    private void getAllContactJsonArrayAndObject() throws JSONException {
         int curID = -1;
         AllContactInfo.allContactJsonArray = new JSONArray();
+        AllContactInfo.allPhoneIDtoPhoneNum = new Hashtable<String, String>();
+        AllContactInfo.allContactJsonObject = new JSONObject();
         for (ContactInfo contact: AllContactInfo.allContactList){
             curID++;
             JSONObject tmp = new JSONObject();
+            JSONObject all = new JSONObject();
             tmp.put("fn", contact.getFirstName());
             tmp.put("ln", contact.getLastName());
             JSONArray phoneTypeArray = new JSONArray();
@@ -103,9 +111,14 @@ public class ContactsActivity extends AppCompatActivity {
             String phId = new Integer(curID).toString()+"_0";
             phoneNumArray.put(phId);
             tmp.put("phId", phoneNumArray);
-            tmp.put("content_id", curID);
             AllContactInfo.allPhoneIDtoPhoneNum.put(phId, contact.getMobilePhone());
-            AllContactInfo.allContactJsonArray.put(new JSONObject().put("content",tmp));
+            all.put("content", tmp);
+            all.put("content_id", curID);
+            AllContactInfo.allContactJsonArray.put(all);
         }
+        AllContactInfo.allContactJsonObject.put("list", AllContactInfo.allContactJsonArray);
     }
+
+
+
 }

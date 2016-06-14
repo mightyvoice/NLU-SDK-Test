@@ -6,6 +6,7 @@ package com.example.lj.asrttstest;
 
 import android.content.Context;
 
+import com.example.lj.asrttstest.info.AppInfo;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
 import com.nuance.dragon.toolkit.audio.AudioSource;
 import com.nuance.dragon.toolkit.audio.AudioType;

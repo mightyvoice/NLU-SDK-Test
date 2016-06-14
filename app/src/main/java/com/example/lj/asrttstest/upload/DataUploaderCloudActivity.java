@@ -4,8 +4,8 @@ import android.content.Context;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.example.lj.asrttstest.AppInfo;
 import com.example.lj.asrttstest.R;
+import com.example.lj.asrttstest.info.AppInfo;
 import com.nuance.dragon.toolkit.cloudservices.DictionaryParam;
 import com.nuance.dragon.toolkit.cloudservices.Transaction;
 import com.nuance.dragon.toolkit.cloudservices.TransactionError;
@@ -20,24 +20,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import android.content.Context;
-import android.telephony.TelephonyManager;
-import android.util.Log;
-import android.widget.Toast;
-
-import com.nuance.dragon.toolkit.cloudservices.DictionaryParam;
-import com.nuance.dragon.toolkit.cloudservices.Transaction;
-import com.nuance.dragon.toolkit.cloudservices.TransactionError;
-import com.nuance.dragon.toolkit.cloudservices.TransactionResult;
 import com.nuance.dragon.toolkit.data.Data.Dictionary;
 import com.nuance.dragon.toolkit.data.Data.Sequence;
 
@@ -49,7 +31,7 @@ import com.nuance.dragon.toolkit.data.Data.Sequence;
  */
 class DataUploaderCloudActivity extends BaseCloudActivity {
     /** The tag used when logging to logcat. */
-    private static final String TAG = "NMT-DataUploadActivity";
+    private static final String TAG = "DataUploadActivity";
 
     /** The NCS Command for data uploads. The command name is DRAGON_NLU_DATA_UPLOAD_CMD. */
     private static final String DEFAULT_DATAUPLOAD_COMMAND = "DRAGON_NLU_DATA_UPLOAD_CMD";
@@ -180,6 +162,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
                     //JSONObject results = JSONObjectFactory.createFromDictionary(arg1.getContents());
                     JSONObject results = arg1.getContents().toJSON();
                     try {
+                        Log.d("res", results.toString(4));
                         String result_type = results.optString("result_type");
                         String status;
 
@@ -354,6 +337,39 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
         }
 
         return 0;
+    }
+
+
+    /**
+     * Upload data.
+     * Ji Li's code for upload
+     * Just call like this: TclUploadData(AllContactInfo.allContactInfoObject, null, null)
+     * @param contactList the contact info in a json object: AllContactInfo.allContactInfoObject
+     * @param uploadListener the upload data transaction listener
+     * @param deleteListener the delete data transaction listener
+     */
+    public void TclUploadData(JSONObject contactList, Transaction.Listener uploadListener, Transaction.Listener deleteListener) {
+        boolean deleteAll = false;
+
+//        deleteAllData(deleteListener);
+
+        Dictionary settings = this.createCommandSettings(DEFAULT_DATAUPLOAD_COMMAND, getLanguage());
+
+        String id = "contacts";
+        String type = "structured_content";
+        String category = "contacts";
+
+        Dictionary d = this.createDataUploadRequestBegin("contacts", type, category, contactList, deleteAll);
+        if( d == null ) {
+            Log.e(TAG, "Could not create the data block to upload to server. Please check logs for more details.");
+            return;
+        }
+        DictionaryParam DataBlock = new DictionaryParam("DATA_BLOCK", d);
+        DictionaryParam UploadDone = new DictionaryParam("UPLOAD_DONE", this.createDataUploadRequestDone(id, type, category));
+
+        uploadData(settings, id, DataBlock, UploadDone, uploadListener);
+        deleteAll = false;
+
     }
 
     // pass in content name to pull from config file...

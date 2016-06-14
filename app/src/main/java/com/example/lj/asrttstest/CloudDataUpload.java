@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.example.lj.asrttstest.info.AppInfo;
 import com.nuance.dragon.toolkit.audio.AudioType;
 import com.nuance.dragon.toolkit.cloudservices.CloudConfig;
 import com.nuance.dragon.toolkit.cloudservices.CloudServices;
@@ -27,6 +28,7 @@ import java.io.IOException;
 
 /**
  * Created by lj on 16/6/3.
+ * the code from the original sample code, cannot work with NLU module
  */
 public class CloudDataUpload{
     public static final String GRAMMAR_DEPOT_FILE = "grammardepot.json";
@@ -86,6 +88,8 @@ public class CloudDataUpload{
         _appManager=new AppsManager("app.lst",new FileManager(_context,"applist"),_context);
         _wakeupManager=new SimpleContentManager("wakeup.lst",new FileManager(_context,"wakeuplist"),false,true,_context,WAKEUP_WORDS);
         _wakeupManager.forceRefresh();
+
+        Log.d("++", _contactManager.toString());
 
         JSONObject json;
         try{

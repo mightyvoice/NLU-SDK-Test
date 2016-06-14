@@ -6,10 +6,9 @@ package com.example.lj.asrttstest.upload;
 
 import android.content.Context;
 import android.location.Location;
-import android.location.LocationManager;
 import android.util.Log;
 
-import com.example.lj.asrttstest.AppInfo;
+import com.example.lj.asrttstest.info.AppInfo;
 import com.nuance.dragon.toolkit.audio.AudioType;
 import com.nuance.dragon.toolkit.cloudservices.CloudConfig;
 import com.nuance.dragon.toolkit.cloudservices.CloudServices;
@@ -19,20 +18,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
-
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
-import android.content.Context;
-import android.location.Location;
-import android.location.LocationManager;
-import android.util.Log;
-
-import com.nuance.dragon.toolkit.audio.AudioType;
-import com.nuance.dragon.toolkit.cloudservices.CloudConfig;
-import com.nuance.dragon.toolkit.cloudservices.CloudServices;
 //import com.nuance.dragon.toolkit.oem.api.NMTContext;
 //import com.nuance.dragon.toolkit.util.Factory2;
 
