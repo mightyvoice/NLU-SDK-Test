@@ -1,9 +1,12 @@
 package com.example.lj.asrttstest;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Handler;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.format.Time;
@@ -14,6 +17,7 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.telephony.TelephonyManager;
 
+import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
 import com.nuance.dragon.toolkit.audio.AudioType;
@@ -48,11 +52,11 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private int DMA_GRAMMAR_VERSION = 1;
     private final String TAG = "NLUCloud";
 
-    private CloudServices               _cloudServices;
-    private CloudRecognizer             _cloudRecognizer;
+    private CloudServices _cloudServices;
+    private CloudRecognizer _cloudRecognizer;
     private RecorderSource<AudioChunk> _recorder;
-    private SpeexEncoderPipe            _speexPipe;
-    private EndPointerPipe              _endpointerPipe;
+    private SpeexEncoderPipe _speexPipe;
+    private EndPointerPipe _endpointerPipe;
 
     private String _uniqueId;
     private Data.Sequence _grammarList, _checksumList;
@@ -65,7 +69,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_cloud_asr);
-        final EditText resultEditText = (EditText)findViewById(R.id.cloudResultEditText);
+        final EditText resultEditText = (EditText) findViewById(R.id.cloudResultEditText);
         final Button startRecognitionButton = (Button) findViewById(R.id.startCloudRecognitionButton);
         final Button stopRecognitionButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
         final Button cancelButton = (Button) findViewById(R.id.cancelCloudRecognitionButton);
@@ -81,30 +85,25 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         _ttsService = new TTSService(getApplicationContext());
 
         //get IMEI number which is the value of uid
-        TelephonyManager telephonyManager = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
+        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         AppInfo.IMEInumber = telephonyManager.getDeviceId();
-        Log.d(TAG, "IMEI: "+AppInfo.IMEInumber );
 
         //start to upload contact information
-        mCloudDataUploadService = new CloudDataUpload(NLUCloudASRActivity.this, resultEditText);
-        mCloudDataUploadService.startDataUpload();
+//        mCloudDataUploadService = new CloudDataUpload(NLUCloudASRActivity.this, resultEditText);
+//        mCloudDataUploadService.startDataUpload();
 
         // First, grammar set-up
         final Handler uiHandler = new Handler();
 
         _workerThread = new WorkerThread();
         _workerThread.start();
-        _workerThread.getHandler().post(new Runnable()
-        {
+        _workerThread.getHandler().post(new Runnable() {
             @Override
-            public void run()
-            {
+            public void run() {
                 readDragonData();
-                uiHandler.post(new Runnable()
-                {
+                uiHandler.post(new Runnable() {
                     @Override
-                    public void run()
-                    {
+                    public void run() {
                         // Cloud services initialization
                         _cloudServices = CloudServices.createCloudServices(NLUCloudASRActivity.this,
                                 new CloudConfig(AppInfo.Host, AppInfo.Port, AppInfo.AppId, AppInfo.AppKey,
@@ -116,28 +115,23 @@ public class NLUCloudASRActivity extends AppCompatActivity {
             }
         });
 
-        startRecognitionButton.setOnClickListener(new View.OnClickListener()
-        {
+        startRecognitionButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v)
-            {
+            public void onClick(View v) {
                 startRecognitionButton.setEnabled(false);
                 stopRecognitionButton.setEnabled(true);
                 cancelButton.setEnabled(true);
 
                 _recorder = new MicrophoneRecorderSource(AudioType.PCM_16k);
                 _speexPipe = new SpeexEncoderPipe();
-                _endpointerPipe = new EndPointerPipe(new SpeechDetectionListener()
-                {
+                _endpointerPipe = new EndPointerPipe(new SpeechDetectionListener() {
                     @Override
-                    public void onStartOfSpeech()
-                    {
+                    public void onStartOfSpeech() {
                         resultEditText.setText("Start of Speech...");
                     }
 
                     @Override
-                    public void onEndOfSpeech()
-                    {
+                    public void onEndOfSpeech() {
                         resultEditText.setText("End of Speech...");
 
                         _cloudRecognizer.processResult();
@@ -150,13 +144,11 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                 _speexPipe.connectAudioSource(_recorder);
                 _endpointerPipe.connectAudioSource(_speexPipe);
 
-                _cloudRecognizer.startRecognition(createCustomSpec(), _endpointerPipe, new CloudRecognizer.Listener()
-                {
+                _cloudRecognizer.startRecognition(createCustomSpec(), _endpointerPipe, new CloudRecognizer.Listener() {
                     private int resultCount = 0;
 
                     @Override
-                    public void onResult(CloudRecognitionResult result)
-                    {
+                    public void onResult(CloudRecognitionResult result) {
                         Logger.debug(this, "NLU Cloud Recognition succeeded!");
                         stopRecording();
                         resultCount++;
@@ -165,8 +157,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                         stopRecognitionButton.setEnabled(false);
                         cancelButton.setEnabled(false);
 
-                        if (resultCount == 1)
-                        {
+                        if (resultCount == 1) {
                             ///////// 1st result is the transcription
 
 //                            Log.d("sss", "1");
@@ -176,31 +167,35 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 //                                e.printStackTrace();
 //                            }
 //                            showResults(resultEditText, getTranscription(result));
-                        }
-                        else
-                        {
+                        } else {
                             ///////// 2nd result is the ADK/NLU action
                             String readableResult = "Error";
                             try {
                                 readableResult = result.getDictionary().toJSON().toString(4);
-                            }catch (JSONException e){
+                            } catch (JSONException e) {
                                 e.printStackTrace();
                             }
                             Log.d("sss", "2");
                             Log.d("sss", readableResult);
-                            sendJsonToEmail(readableResult);
+//                            sendJsonToEmail(readableResult);
                             String feedback = "I don't know what to do";
                             String phoneNumber = "Error";
                             try {
-//                                feedback = jsonParser.getCallingFeedBack(readableResult);
                                 feedback = jsonParser.getConverstationFeedback(readableResult);
                                 phoneNumber = jsonParser.getPhoneNumberFromActionObject();
+                                phoneNumber = AllContactInfo.allPhoneIDtoPhoneNum.get(phoneNumber);
                             } catch (JSONException e) {
                                 e.printStackTrace();
-                            }finally {
+                            } finally {
                                 showResults(resultEditText, feedback);
                                 _ttsService.performTTS(getApplicationContext(), feedback);
-//                                _ttsService.performTTS(getApplicationContext(), "The phone number is "+phoneNumber);
+                            }
+                            Log.d("sss", phoneNumber);
+                            if (ActivityCompat.checkSelfPermission(getApplicationContext(),
+                                    Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+                                Intent callIntent = new Intent(Intent.ACTION_CALL);
+                                callIntent.setData(Uri.parse("tel:" + phoneNumber));
+                                startActivity(callIntent);
                             }
                         }
                     }
@@ -348,13 +343,16 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         // Customize ASR command spec
         Data.Dictionary customSettings = new  Data.Dictionary();
         customSettings.put("application", "TCL");
-        //user id for data upload
-        customSettings.put("uid", AppInfo.IMEInumber);
         customSettings.put("application_session_id", String.valueOf(UUID.randomUUID()));
         customSettings.put("dictation_language", "eng-USA");
         //original one from sample app
 //        customSettings.put("dictation_type", "searchormessaging");
         customSettings.put("dictation_type", "nma_dm_main");
+
+        //Ji Li from data upload class
+        customSettings.put("uid", AppInfo.IMEInumber);
+        customSettings.put("nmaid", AppInfo.AppId);
+        customSettings.put("application_name",  getApplicationContext().getString(R.string.app_name));
 
         RecogSpec retRecogSpec = new RecogSpec("DRAGON_NLU_ASR_CMD", customSettings, "AUDIO_INFO")
         {

@@ -1,12 +1,15 @@
 package com.example.lj.asrttstest;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.Button;
 
+import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.upload.ContactsActivity;
 
 public class MainActivity extends Activity {
@@ -15,6 +18,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        TelephonyManager telephonyManager = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
+        AppInfo.IMEInumber = telephonyManager.getDeviceId();
 
         final Button cloudRecognizerButton = (Button) findViewById(R.id.cloudRecognizerButton);
         cloudRecognizerButton.setOnClickListener(new View.OnClickListener()

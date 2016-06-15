@@ -115,7 +115,7 @@ public class JsonParser {
             if(curObject.has("contact")){
                 curObject = curObject.getJSONObject("contact");
                 curObject = curObject.getJSONObject("value");
-                curObject = curObject.getJSONObject("phoneNumber");
+                curObject = curObject.getJSONObject("phoneNumberId");
                 String result = curObject.getString("value");
                 return result;
             }

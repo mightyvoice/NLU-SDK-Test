@@ -108,15 +108,10 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
      *
      * @param c the application mContext
      */
-    public DataUploaderCloudActivity( Context c ) {
+    public DataUploaderCloudActivity( Context c )
+    {
         super(c);
-    }
-
-    /**
-     * Release cloud recognition.
-     */
-    void releaseCloudDataUploader() {
-        super.releaseCloudServices();
+        initCloudServices();
     }
 
     /**
@@ -157,39 +152,21 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
                 public void onTransactionResult(Transaction arg0, TransactionResult arg1,
                                                 boolean arg2) {
                     Log.d(TAG, "Transaction Completed...");
-
-
-                    //JSONObject results = JSONObjectFactory.createFromDictionary(arg1.getContents());
                     JSONObject results = arg1.getContents().toJSON();
                     try {
                         Log.d("res", results.toString(4));
-                        String result_type = results.optString("result_type");
-                        String status;
-
-                        if( result_type != null && result_type.equalsIgnoreCase("nvc_reset_user_profile_cmd")) {
-                            status = results.optString("status");
-                            if( status.equalsIgnoreCase("success") )
-                                mGrammars.clear();
-                        }
-                        else {	// expecting nvc_data_upload_cmd or dragon_nlu_data_upload_cmd
-                            status = results.optJSONArray("result_list").getJSONObject(0).getString("status");
-                            String checksum = results.optJSONArray("result_list").getJSONObject(0).getString("checksum");
-                            String id = results.optJSONArray("result_list").getJSONObject(0).getString("id");
-                            String type = results.optJSONArray("result_list").getJSONObject(0).getString("type");
-                            String content_category = null;
-                            if( type.equalsIgnoreCase("structured_content") )
-                                content_category = results.optJSONArray("result_list").getJSONObject(0).getString("structured_content_category");
-
-                            Grammar g = new Grammar(id, type, content_category, checksum);
-                            mGrammars.add(g);
-                        }
+                        String status = results
+                                .optJSONObject("value")
+                                .optJSONObject("result_list")
+                                .optJSONArray("value")
+                                .getJSONObject(0)
+                                .getJSONObject("value")
+                                .getJSONObject("status")
+                                .getString("value");
+                        Log.d("res", status);
+                    }catch (JSONException e){
+                        e.printStackTrace();
                     }
-                    catch (JSONException e) {
-                        Log.e(TAG, e.getMessage());
-                    }
-
-                    onDataUploadResult(arg0, results);
-
                 }
 
                 @Override
@@ -351,7 +328,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
     public void TclUploadData(JSONObject contactList, Transaction.Listener uploadListener, Transaction.Listener deleteListener) {
         boolean deleteAll = false;
 
-//        deleteAllData(deleteListener);
+        deleteAllData(deleteListener);
 
         Dictionary settings = this.createCommandSettings(DEFAULT_DATAUPLOAD_COMMAND, getLanguage());
 
@@ -529,6 +506,8 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
         settings.put("utterance_number", "5");
         settings.put("audio_source", "SpeakerAndMicrophone");
 
+        //my code to set other parameters
+        settings.put("uid", AppInfo.IMEInumber);
         return settings;
     }
 
