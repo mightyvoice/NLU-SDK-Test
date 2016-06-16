@@ -50,6 +50,11 @@ public class ContactsActivity extends AppCompatActivity {
 
         dataUploader = new DataUploaderCloudActivity(this);
         dataUploader.TclUploadData(AllContactInfo.allContactJsonObject, null, null);
+        Log.d("haha", dataUploader.resultStatus);
+        if(dataUploader.resultStatus.equalsIgnoreCase("success")) {
+            Toast.makeText(this, "Upload Success!", Toast.LENGTH_SHORT).show();
+            this.finish();
+        }
     }
 
     private void getAllContactList(){

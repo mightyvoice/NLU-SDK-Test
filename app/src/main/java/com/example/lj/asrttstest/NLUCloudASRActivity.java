@@ -17,6 +17,7 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.telephony.TelephonyManager;
 
+import com.example.lj.asrttstest.dialog.JsonParser;
 import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
@@ -181,6 +182,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                             String feedback = "I don't know what to do";
                             String phoneNumber = "Error";
                             try {
+                                jsonParser.processServerResponse(result.getDictionary().toJSON());
                                 feedback = jsonParser.getConverstationFeedback(readableResult);
                                 phoneNumber = jsonParser.getPhoneNumberFromActionObject();
                                 phoneNumber = AllContactInfo.allPhoneIDtoPhoneNum.get(phoneNumber);

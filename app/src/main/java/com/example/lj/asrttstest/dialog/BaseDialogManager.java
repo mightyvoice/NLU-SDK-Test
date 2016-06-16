@@ -1,6 +1,9 @@
 package com.example.lj.asrttstest.dialog;
 
+import android.util.Log;
+
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -82,6 +85,8 @@ public class BaseDialogManager implements IDialogManager {
     /** An instance of the server_specified_settings returned in the NCS response. The client must use these in the follow-up transaction. */
     private JSONObject mServerSpecifiedSettings	= null;
 
+    private JSONObject mAppServerResult = null;
+
 
     /* (non-Javadoc)
      * @see com.nuance.dragon.toolkit.sample.IDialogManager#processServerResponse(org.json.JSONObject)
@@ -89,7 +94,7 @@ public class BaseDialogManager implements IDialogManager {
     @Override
     public IDialogResult processServerResponse(JSONObject response) {
         mJsonResponse = response;
-
+        mAppServerResult = getAppServerResults();
         mStatus = parseStatus();
         mFinalResponse = parseFinalResponse();
         mDomain = parseDomain();
@@ -102,6 +107,15 @@ public class BaseDialogManager implements IDialogManager {
         mNlpsVersion = parseNlpsVersion();
         mServerSpecifiedSettings = parseServerSpecifiedSettings();
 
+        Log.d("haha", getDialogPhase()+"\n"+
+                getDomain()+"\n"+
+                getIntent()+"\n"+
+                getNlpsVersion()+"\n"+
+                getStatus()+"\n"+
+                getSystemText()+
+                getTtsText()
+        );
+
 		/* The dialog result. */
         return new DialogResult(mTtsText, mSystemText, isFinalResponse(), continueDialog(), mDialogPhase);
     }
@@ -112,9 +126,13 @@ public class BaseDialogManager implements IDialogManager {
      * @return the app server results
      */
     private JSONObject getAppServerResults() {
-        if( mJsonResponse != null )
-            return mJsonResponse.optJSONObject("appserver_results");
-
+        if (mJsonResponse != null) {
+            mAppServerResult = mJsonResponse
+                    .optJSONObject("value")
+                    .optJSONObject("appserver_results")
+                    .optJSONObject("value");
+            return mAppServerResult;
+        }
         return null;
     }
 
@@ -126,9 +144,10 @@ public class BaseDialogManager implements IDialogManager {
     private JSONObject getPayload() {
         JSONObject payload = null;
 
-        JSONObject appserverResults = getAppServerResults();
-        if (appserverResults != null)
-            payload = appserverResults.optJSONObject("payload");
+        if (mAppServerResult != null)
+            payload = mAppServerResult
+                    .optJSONObject("payload")
+                    .optJSONObject("value");
 
         return payload;
     }
@@ -140,10 +159,10 @@ public class BaseDialogManager implements IDialogManager {
      */
     private JSONArray getActions() {
         JSONArray actions = null;
-
         JSONObject payload = getPayload();
         if (payload != null)
-            actions = payload.optJSONArray("actions");
+            actions = payload.optJSONObject("actions")
+                    .optJSONArray("value");
 
         return actions;
     }
@@ -157,10 +176,9 @@ public class BaseDialogManager implements IDialogManager {
     private JSONObject findActionByType(String t) {
         JSONArray actions = getActions();
         if (actions == null) return null;
-
         for(int i = 0; i < actions.length(); i++){
-            JSONObject o = actions.optJSONObject(i);
-            String oType = o.optString("type");
+            JSONObject o = actions.optJSONObject(i).optJSONObject("value");
+            String oType = o.optJSONObject("type").optString("value");
 
             if( oType.equalsIgnoreCase(t)) return o;
         }
@@ -171,7 +189,8 @@ public class BaseDialogManager implements IDialogManager {
     /**
      * Find action by type.
      *
-     * @param searchFromBottom this flag specifies whether or not to search for the action in the server response from bottom up or top down
+     * @param searchFromBottom this flag specifies whether or not to search for
+     *                         the action in the server response from bottom up or top down
      * @return the JSON object
      */
     private JSONObject findActionByType(boolean searchFromBottom) {
@@ -182,8 +201,8 @@ public class BaseDialogManager implements IDialogManager {
         if (actions == null) return null;
 
         for(int i = actions.length(); i > 0; i--){
-            JSONObject o = actions.optJSONObject(i-1);
-            String oType = o.optString("type");
+            JSONObject o = actions.optJSONObject(i-1).optJSONObject("value");
+            String oType = o.optJSONObject("type").optString("value");
 
             if( oType.equalsIgnoreCase(BaseDialogManager.ACTION_TYPE_DMSTATE)) return o;
         }
@@ -197,9 +216,8 @@ public class BaseDialogManager implements IDialogManager {
     @Override
     public String parseStatus() {
         mStatus = null;
-        JSONObject appserverResults = getAppServerResults();
-        if (appserverResults != null)
-            mStatus = appserverResults.optString("status");
+        if (mAppServerResult != null)
+            mStatus = mAppServerResult.optJSONObject("status").optString("value");
 
         return mStatus;
     }
@@ -218,8 +236,8 @@ public class BaseDialogManager implements IDialogManager {
     @Override
     public int parseFinalResponse() {
         mFinalResponse = 0;
-        if (mJsonResponse != null)
-            mFinalResponse = mJsonResponse.optInt("final_response");
+        if (mAppServerResult != null)
+            mFinalResponse = mAppServerResult.optJSONObject("final_response").optInt("value");
 
         return mFinalResponse;
     }
@@ -233,14 +251,14 @@ public class BaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseDomain()
+     * @see com.nuance.dragon.toolkit.sample.IDialogManager
      */
     @Override
     public String parseDomain() {
         mDomain = null;
         JSONObject action = findActionByType(BaseDialogManager.ACTION_TYPE_DOMAIN);
         if (action != null)
-            mDomain = action.optString("app");
+            mDomain = action.optJSONObject("app").optString("value");
 
         return mDomain;
     }
@@ -261,7 +279,7 @@ public class BaseDialogManager implements IDialogManager {
         mDialogPhase = null;
         JSONObject action = findActionByType(true);
         if (action != null)
-            mDialogPhase = action.optString("dialogPhase");
+            mDialogPhase = action.optJSONObject("dialogPhase").optString("value");
 
         return mDialogPhase;
     }
@@ -282,7 +300,7 @@ public class BaseDialogManager implements IDialogManager {
         mSystemText = null;
         JSONObject action = findActionByType(BaseDialogManager.ACTION_TYPE_CONVERSATION);
         if (action != null)
-            mSystemText = action.optString("text");
+            mSystemText = action.optJSONObject("text").optString("value");
 
         return mSystemText;
     }
@@ -303,7 +321,7 @@ public class BaseDialogManager implements IDialogManager {
         mIntent = null;
         JSONObject action = findActionByType(BaseDialogManager.ACTION_TYPE_APPLICATION);
         if (action != null)
-            mIntent = action.optString("action");
+            mIntent = action.optJSONObject("action").optString("value");
 
         return mIntent;
     }
@@ -324,7 +342,7 @@ public class BaseDialogManager implements IDialogManager {
         mTtsText= null;
         JSONObject action = findActionByType(BaseDialogManager.ACTION_TYPE_TTS);
         if (action != null)
-            mTtsText = action.optString("text");
+            mTtsText = action.optJSONObject("text").optString("value");
 
         return mTtsText;
     }
@@ -396,7 +414,7 @@ public class BaseDialogManager implements IDialogManager {
 
         JSONObject payload = getPayload();
         if (payload != null)
-            mNlpsVersion = payload.optString("nlps_version");
+            mNlpsVersion = payload.optJSONObject("nlps_version").optString("value");
 
         return mNlpsVersion;
     }

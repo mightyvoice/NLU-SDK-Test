@@ -45,6 +45,8 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
     /** The list of application grammars. */
     private List<Grammar> mGrammars = new ArrayList<Grammar>();
 
+    public String resultStatus = "";
+
     /**
      * Gets the grammars.
      *
@@ -155,7 +157,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
                     JSONObject results = arg1.getContents().toJSON();
                     try {
                         Log.d("res", results.toString(4));
-                        String status = results
+                        resultStatus = results
                                 .optJSONObject("value")
                                 .optJSONObject("result_list")
                                 .optJSONArray("value")
@@ -163,7 +165,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
                                 .getJSONObject("value")
                                 .getJSONObject("status")
                                 .getString("value");
-                        Log.d("res", status);
+                        Log.d("res", resultStatus);
                     }catch (JSONException e){
                         e.printStackTrace();
                     }

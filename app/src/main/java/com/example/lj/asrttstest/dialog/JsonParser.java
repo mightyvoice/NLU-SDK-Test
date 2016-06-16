@@ -1,6 +1,9 @@
-package com.example.lj.asrttstest;
+package com.example.lj.asrttstest.dialog;
 
-import android.util.JsonReader;
+/**
+ * Created by lj on 16/6/15.
+ */
+import com.example.lj.asrttstest.dialog.BaseDialogManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -11,26 +14,32 @@ import java.io.InputStream;
 /**
  * Created by lj on 16/5/23.
  */
-public class JsonParser {
+public class JsonParser extends BaseDialogManager{
+
     private String data;
-    private JsonReader jsonReader;
-    private InputStream dataInputStream;
-    private JSONObject actionObject;
+    private JSONObject actionObject = null;
+    public String textForTTS;
+    public String textForDisplay;
+
 
     public JsonParser(){
         data = "";
     }
 
-    public JsonParser(String input) throws JSONException {
+    JsonParser(String input) throws JSONException {
         data = input;
+    }
+
+    JsonParser(JSONObject input){
+        processServerResponse(input);
     }
 
     public void setData(String input) throws JSONException{
         data = input;
-        actionObject = getActionObject(input);
+        getActionObject(input);
     }
 
-    private JSONObject getActionObject(String input) throws JSONException{
+    private void getActionObject(String input) throws JSONException{
         JSONObject curObject = new JSONObject(input);
         curObject = curObject.getJSONObject("value");
         curObject = curObject.getJSONObject("appserver_results");
@@ -38,7 +47,7 @@ public class JsonParser {
         curObject = curObject.getJSONObject("payload");
         curObject = curObject.getJSONObject("value");
         curObject = curObject.getJSONObject("actions");
-        return curObject;
+        actionObject = curObject;
     }
 
     private boolean ifContainConversationTag(JSONObject curObject){
@@ -92,7 +101,6 @@ public class JsonParser {
 
     public String getConverstationFeedback(String input) throws JSONException{
         setData(input);
-//        JSONObject curObject = getActionObject(input);
         JSONObject curObject = actionObject;
         JSONArray curArray = curObject.getJSONArray("value");
         for(int i = 0; i < curArray.length(); i++) {
