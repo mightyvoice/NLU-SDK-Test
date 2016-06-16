@@ -24,5 +24,9 @@
                 android:text="@string/Cloud_Data_Uploader"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content" />
-
+            <Button
+                android:id="@+id/getContactButton"
+                android:text="Upload Contacts"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content" />
         </LinearLayout>

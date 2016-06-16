@@ -41,12 +41,12 @@ public class JsonParser extends BaseDialogManager{
 
     private void getActionObject(String input) throws JSONException{
         JSONObject curObject = new JSONObject(input);
-        curObject = curObject.getJSONObject("value");
-        curObject = curObject.getJSONObject("appserver_results");
-        curObject = curObject.getJSONObject("value");
-        curObject = curObject.getJSONObject("payload");
-        curObject = curObject.getJSONObject("value");
-        curObject = curObject.getJSONObject("actions");
+        curObject = curObject.optJSONObject("value");
+        curObject = curObject.optJSONObject("appserver_results");
+        curObject = curObject.optJSONObject("value");
+        curObject = curObject.optJSONObject("payload");
+        curObject = curObject.optJSONObject("value");
+        curObject = curObject.optJSONObject("actions");
         actionObject = curObject;
     }
 
@@ -99,7 +99,7 @@ public class JsonParser extends BaseDialogManager{
         return false;
     }
 
-    public String getConverstationFeedback(String input) throws JSONException{
+    public String getConverstationFeedback(String input)throws JSONException{
         setData(input);
         JSONObject curObject = actionObject;
         JSONArray curArray = curObject.getJSONArray("value");
@@ -116,15 +116,15 @@ public class JsonParser extends BaseDialogManager{
     }
 
     public String getPhoneNumberFromActionObject() throws JSONException {
-        JSONArray curArray = actionObject.getJSONArray("value");
+        JSONArray curArray = actionObject.optJSONArray("value");
         for(int i = 0; i < curArray.length(); i++){
-            JSONObject curObject = curArray.getJSONObject(i);
-            curObject = curObject.getJSONObject("value");
+            JSONObject curObject = curArray.optJSONObject(i);
+            curObject = curObject.optJSONObject("value");
             if(curObject.has("contact")){
-                curObject = curObject.getJSONObject("contact");
-                curObject = curObject.getJSONObject("value");
-                curObject = curObject.getJSONObject("phoneNumberId");
-                String result = curObject.getString("value");
+                curObject = curObject.optJSONObject("contact");
+                curObject = curObject.optJSONObject("value");
+                curObject = curObject.optJSONObject("phoneNumberId");
+                String result = curObject.optString("value");
                 return result;
             }
         }

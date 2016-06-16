@@ -14,6 +14,10 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.CALL_PHONE"/>
+
+
 
     <application
         android:allowBackup="true"
@@ -33,7 +37,8 @@
         <activity android:name=".TTSCloudActivity" />
         <activity android:name=".CloudDataUploadActivity" />
         <activity android:name=".upload.DataUploadActivity" />
-        <activity android:name=".upload.BaseCloudActivity"></activity>
+        <activity android:name=".upload.BaseCloudActivity" />
+        <activity android:name=".upload.ContactsActivity"></activity>
     </application>
 
 </manifest>

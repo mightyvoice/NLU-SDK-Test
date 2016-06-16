@@ -17,6 +17,7 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.telephony.TelephonyManager;
 
+import com.example.lj.asrttstest.dialog.CallingDomainProc;
 import com.example.lj.asrttstest.dialog.JsonParser;
 import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.AppInfo;
@@ -168,6 +169,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 //                                e.printStackTrace();
 //                            }
 //                            showResults(resultEditText, getTranscription(result));
+
                         } else {
                             ///////// 2nd result is the ADK/NLU action
                             String readableResult = "Error";
@@ -181,24 +183,23 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 //                            sendJsonToEmail(readableResult);
                             String feedback = "I don't know what to do";
                             String phoneNumber = "Error";
-                            try {
-                                jsonParser.processServerResponse(result.getDictionary().toJSON());
-                                feedback = jsonParser.getConverstationFeedback(readableResult);
-                                phoneNumber = jsonParser.getPhoneNumberFromActionObject();
-                                phoneNumber = AllContactInfo.allPhoneIDtoPhoneNum.get(phoneNumber);
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            } finally {
+                            jsonParser.processServerResponse(result.getDictionary().toJSON());
+                            feedback = jsonParser.getTtsText();
+                            if(jsonParser.getDomain().equals("calling")){
+                                CallingDomainProc callingDomain
+                                        = new CallingDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
+                                callingDomain.process();
+                                phoneNumber = callingDomain.getPhoneNumber();
                                 showResults(resultEditText, feedback);
-                                _ttsService.performTTS(getApplicationContext(), feedback);
+                                Log.d("sss", phoneNumber);
+                                if (!phoneNumber.equals("") && ActivityCompat.checkSelfPermission(getApplicationContext(),
+                                        Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+                                    Intent callIntent = new Intent(Intent.ACTION_CALL);
+                                    callIntent.setData(Uri.parse("tel:" + phoneNumber));
+                                    startActivity(callIntent);
+                                }
                             }
-                            Log.d("sss", phoneNumber);
-                            if (ActivityCompat.checkSelfPermission(getApplicationContext(),
-                                    Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-                                Intent callIntent = new Intent(Intent.ACTION_CALL);
-                                callIntent.setData(Uri.parse("tel:" + phoneNumber));
-                                startActivity(callIntent);
-                            }
+                            _ttsService.performTTS(getApplicationContext(), feedback);
                         }
                     }
 
@@ -352,6 +353,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         customSettings.put("dictation_type", "nma_dm_main");
 
         //Ji Li from data upload class
+        // without the followings it still works fine
         customSettings.put("uid", AppInfo.IMEInumber);
         customSettings.put("nmaid", AppInfo.AppId);
         customSettings.put("application_name",  getApplicationContext().getString(R.string.app_name));

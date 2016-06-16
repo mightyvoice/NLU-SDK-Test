@@ -157,7 +157,7 @@ public class BaseDialogManager implements IDialogManager {
      *
      * @return the actions
      */
-    private JSONArray getActions() {
+    public JSONArray getActions() {
         JSONArray actions = null;
         JSONObject payload = getPayload();
         if (payload != null)
