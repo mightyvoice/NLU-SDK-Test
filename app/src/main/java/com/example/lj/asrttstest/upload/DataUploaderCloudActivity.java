@@ -153,10 +153,10 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
                 @Override
                 public void onTransactionResult(Transaction arg0, TransactionResult arg1,
                                                 boolean arg2) {
-                    Log.d(TAG, "Transaction Completed...");
+                    Log.d(TAG, "Upload Completed...");
                     JSONObject results = arg1.getContents().toJSON();
                     try {
-                        Log.d("res", results.toString(4));
+//                        Log.d("res", results.toString(4));
                         resultStatus = results
                                 .optJSONObject("value")
                                 .optJSONObject("result_list")

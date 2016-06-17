@@ -54,6 +54,7 @@ import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class NLUCloudASRActivity extends AppCompatActivity {
@@ -74,11 +75,13 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private TTSService _ttsService;
     private CloudDataUpload mCloudDataUploadService;
 
+    private EditText resultEditText;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_cloud_asr);
-        final EditText resultEditText = (EditText) findViewById(R.id.cloudResultEditText);
+        resultEditText = (EditText) findViewById(R.id.cloudResultEditText);
         final Button startRecognitionButton = (Button) findViewById(R.id.startCloudRecognitionButton);
         final Button stopRecognitionButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
         final Button cancelButton = (Button) findViewById(R.id.cancelCloudRecognitionButton);
@@ -417,7 +420,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         Cursor cur = cr.query(ContactsContract.Contacts.CONTENT_URI,
                 null, null, null, null);
 
-        ContactInfo contact;
+        ContactInfo contact = new ContactInfo();
         if (cur.getCount() > 0) {
             while (cur.moveToNext()) {
                 contact = new ContactInfo();
@@ -441,7 +444,11 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                     while (pCur.moveToNext()) {
                         String phoneNo = pCur.getString(pCur.getColumnIndex(
                                 ContactsContract.CommonDataKinds.Phone.NUMBER));
+                        String phoneType = pCur.getString(pCur.getColumnIndex(
+                                ContactsContract.CommonDataKinds.Phone.TYPE));
                         contact.setMobilePhone(phoneNo);
+                        phoneType = contact.phoneTypeTable.get(phoneType);
+                        contact.phoneNumberTable.put(phoneType, phoneNo);
                     }
                     pCur.close();
                 }
@@ -462,17 +469,23 @@ public class NLUCloudASRActivity extends AppCompatActivity {
             tmp.put("fn", contact.getFirstName());
             tmp.put("ln", contact.getLastName());
             JSONArray phoneTypeArray = new JSONArray();
-            phoneTypeArray.put("mobile");
-            tmp.put("ph", phoneTypeArray);
             JSONArray phoneNumArray = new JSONArray();
-            String phId = new Integer(curID).toString()+"_0";
-            phoneNumArray.put(phId);
+            Set<String> types = contact.phoneNumberTable.keySet();
+            int phoneID = -1; //starts from 0
+            for(String phoneType: types){
+                phoneTypeArray.put(phoneType);
+                phoneID++;
+                String phId = new Integer(curID).toString()+"_"+new Integer(phoneID).toString();
+                phoneNumArray.put(phId);
+                AllContactInfo.allPhoneIDtoPhoneNum.put(phId, contact.phoneNumberTable.get(phoneType));
+            }
             tmp.put("phId", phoneNumArray);
-            AllContactInfo.allPhoneIDtoPhoneNum.put(phId, contact.getMobilePhone());
+            tmp.put("ph", phoneTypeArray);
             all.put("content", tmp);
             all.put("content_id", curID);
             AllContactInfo.allContactJsonArray.put(all);
         }
         AllContactInfo.allContactJsonObject.put("list", AllContactInfo.allContactJsonArray);
+        resultEditText.setText(AllContactInfo.allContactJsonObject.toString(4));
     }
 }

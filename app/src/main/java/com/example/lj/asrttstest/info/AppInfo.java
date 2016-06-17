@@ -52,6 +52,7 @@ public class AppInfo {
 //            (byte) 0x66};
 
     public static String IMEInumber;
+    public static String applicationSessionID;
 
     private static byte[] toByteArray(String appKey)
     {

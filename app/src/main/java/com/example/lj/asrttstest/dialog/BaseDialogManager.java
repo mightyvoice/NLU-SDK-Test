@@ -14,7 +14,7 @@ import org.json.JSONObject;
 public class BaseDialogManager implements IDialogManager {
 
     /** Dialog Phase is returned in the NCS Ref NLU JSON Response. topLevel let's the client know that the dialog is complete and it should reset dialog management after processing the response. */
-    private static final String DIALOG_PHASE_TOP_LEVEL				= "topLevel";
+    protected static final String DIALOG_PHASE_TOP_LEVEL				= "topLevel";
 
     /** Dialog Phase is returned in the NCS Ref NLU JSON Response. informationRequest informs the client that the dialog is not complete and the user needs to be prompted for more information. */
     protected static final String DIALOG_PHASE_INFORMATION_REQUEST		= "informationRequest";
@@ -26,66 +26,66 @@ public class BaseDialogManager implements IDialogManager {
     protected static final String DIALOG_PHASE_CONFIRMATION				= "confirmation";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. dmState contains details about the dialog phase and request status. */
-    private static final String ACTION_TYPE_DMSTATE					= "dmState";
+    protected static final String ACTION_TYPE_DMSTATE					= "dmState";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. conversation contains UI prompt details. */
-    private static final String ACTION_TYPE_CONVERSATION				= "conversation";
+    protected static final String ACTION_TYPE_CONVERSATION				= "conversation";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. tts contains TTS prompt details. */
-    private static final String ACTION_TYPE_TTS						= "tts";
+    protected static final String ACTION_TYPE_TTS						= "tts";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. domain contains NLU domain details. */
-    private static final String ACTION_TYPE_DOMAIN					= "domain";
+    protected static final String ACTION_TYPE_DOMAIN					= "domain";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. application contains details about the target application for the selected domain */
-    private static final String ACTION_TYPE_APPLICATION				= "application";
+    protected static final String ACTION_TYPE_APPLICATION				= "application";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. reset informs the client to send a reset request to the server. */
-    private static final String ACTION_TYPE_RESET						= "reset";
+    protected static final String ACTION_TYPE_RESET						= "reset";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. get_data informs the client that a data exchange between client and server is required, and specifies the parameters involved. */
-    private static final String ACTION_TYPE_GETDATA					= "get_data";
+    protected static final String ACTION_TYPE_GETDATA					= "get_data";
 
     /** The NCS server response represented as a String. */
     protected String serverResponse = null;
 
     /** The NCS Server response represented as a JSON object. */
-    private JSONObject mJsonResponse = null;
+    protected JSONObject mJsonResponse = null;
 
     /** The status value returned in the NCS response. */
-    private String mStatus 				= null;
+    protected String mStatus 				= null;
 
     /** The value of final_response returned in the NCS response. */
-    private int mFinalResponse 			= 0;
+    protected int mFinalResponse 			= 0;
 
     /** The NLU domain returned in the NCS response. */
-    private String mDomain 				= null;
+    protected String mDomain 				= null;
 
     /** The dialog phase returned in the NCS response. */
-    private String mDialogPhase 			= null;
+    protected String mDialogPhase 			= null;
 
     /** The system text returned in the NCS response to be displayed in the UI. */
-    private String mSystemText			= null;
+    protected String mSystemText			= null;
 
     /** The tts text returned in the NCS response to be played back to the user. */
-    private String mTtsText				= null;
+    protected String mTtsText				= null;
 
     /** A flag to track if the server has requested the dialog be reset. */
-    private boolean mResetDialog			= false;
+    protected boolean mResetDialog			= false;
 
     /** The NLU intent returned in the NCS response. */
-    private String mIntent				= null;
+    protected String mIntent				= null;
 
     /** An instance of the get_data JSON object returned in the NCS response. */
-    private JSONObject mGetData			= null;
+    protected JSONObject mGetData			= null;
 
     /** The version of the NLPS server that handled the request. */
-    private String mNlpsVersion			= null;
+    protected String mNlpsVersion			= null;
 
     /** An instance of the server_specified_settings returned in the NCS response. The client must use these in the follow-up transaction. */
-    private JSONObject mServerSpecifiedSettings	= null;
+    protected JSONObject mServerSpecifiedSettings	= null;
 
-    private JSONObject mAppServerResult = null;
+    protected JSONObject mAppServerResult = null;
 
 
     /* (non-Javadoc)
@@ -107,14 +107,6 @@ public class BaseDialogManager implements IDialogManager {
         mNlpsVersion = parseNlpsVersion();
         mServerSpecifiedSettings = parseServerSpecifiedSettings();
 
-        Log.d("haha", getDialogPhase()+"\n"+
-                getDomain()+"\n"+
-                getIntent()+"\n"+
-                getNlpsVersion()+"\n"+
-                getStatus()+"\n"+
-                getSystemText()+
-                getTtsText()
-        );
 
 		/* The dialog result. */
         return new DialogResult(mTtsText, mSystemText, isFinalResponse(), continueDialog(), mDialogPhase);
@@ -125,7 +117,7 @@ public class BaseDialogManager implements IDialogManager {
      *
      * @return the app server results
      */
-    private JSONObject getAppServerResults() {
+    protected JSONObject getAppServerResults() {
         if (mJsonResponse != null) {
             mAppServerResult = mJsonResponse
                     .optJSONObject("value")
@@ -141,7 +133,7 @@ public class BaseDialogManager implements IDialogManager {
      *
      * @return the payload
      */
-    private JSONObject getPayload() {
+    protected JSONObject getPayload() {
         JSONObject payload = null;
 
         if (mAppServerResult != null)
@@ -173,7 +165,7 @@ public class BaseDialogManager implements IDialogManager {
      * @param t the action type name
      * @return the action as a JSON object
      */
-    private JSONObject findActionByType(String t) {
+    protected JSONObject findActionByType(String t) {
         JSONArray actions = getActions();
         if (actions == null) return null;
         for(int i = 0; i < actions.length(); i++){
@@ -193,7 +185,7 @@ public class BaseDialogManager implements IDialogManager {
      *                         the action in the server response from bottom up or top down
      * @return the JSON object
      */
-    private JSONObject findActionByType(boolean searchFromBottom) {
+    protected JSONObject findActionByType(boolean searchFromBottom) {
         if( !searchFromBottom )
             return findActionByType(BaseDialogManager.ACTION_TYPE_DMSTATE);
 

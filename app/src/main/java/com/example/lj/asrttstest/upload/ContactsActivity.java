@@ -20,6 +20,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.Set;
 
 public class ContactsActivity extends AppCompatActivity {
     /**
@@ -57,13 +58,79 @@ public class ContactsActivity extends AppCompatActivity {
         }
     }
 
+//    private void getAllContactList(){
+//        AllContactInfo.allContactList = new ArrayList<ContactInfo>();
+//        ContentResolver cr = getContentResolver();
+//        Cursor cur = cr.query(ContactsContract.Contacts.CONTENT_URI,
+//                null, null, null, null);
+//
+//        ContactInfo contact;
+//        if (cur.getCount() > 0) {
+//            while (cur.moveToNext()) {
+//                contact = new ContactInfo();
+//
+//                String id = cur.getString(
+//                        cur.getColumnIndex(ContactsContract.Contacts._ID));
+//                String name = cur.getString(cur.getColumnIndex(
+//                        ContactsContract.Contacts.DISPLAY_NAME));
+//                String[] nameList = name.split(" ");
+//                contact.setFirstName(nameList[0]);
+//                contact.setLastName(nameList[1]);
+//                contact.setMobilePhone("");
+//
+//                if (Integer.parseInt(cur.getString(cur.getColumnIndex(
+//                        ContactsContract.Contacts.HAS_PHONE_NUMBER))) > 0) {
+//                    Cursor pCur = cr.query(
+//                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+//                            null,
+//                            ContactsContract.CommonDataKinds.Phone.CONTACT_ID +" = ?",
+//                            new String[]{id}, null);
+//                    while (pCur.moveToNext()) {
+//                        String phoneNo = pCur.getString(pCur.getColumnIndex(
+//                                ContactsContract.CommonDataKinds.Phone.NUMBER));
+////                        Toast.makeText(ContactsActivity.this, "Name: " + name
+////                                + ", Phone No: " + phoneNo, Toast.LENGTH_SHORT).show();
+//                        contact.setMobilePhone(phoneNo);
+//                    }
+//                    pCur.close();
+//                }
+//                AllContactInfo.allContactList.add(contact);
+//            }
+//        }
+//    }
+//
+//    private void getAllContactJsonArrayAndObject() throws JSONException {
+//        int curID = -1;
+//        AllContactInfo.allContactJsonArray = new JSONArray();
+//        AllContactInfo.allPhoneIDtoPhoneNum = new Hashtable<String, String>();
+//        AllContactInfo.allContactJsonObject = new JSONObject();
+//        for (ContactInfo contact: AllContactInfo.allContactList){
+//            curID++;
+//            JSONObject tmp = new JSONObject();
+//            JSONObject all = new JSONObject();
+//            tmp.put("fn", contact.getFirstName());
+//            tmp.put("ln", contact.getLastName());
+//            JSONArray phoneTypeArray = new JSONArray();
+//            phoneTypeArray.put("mobile");
+//            tmp.put("ph", phoneTypeArray);
+//            JSONArray phoneNumArray = new JSONArray();
+//            String phId = new Integer(curID).toString()+"_0";
+//            phoneNumArray.put(phId);
+//            tmp.put("phId", phoneNumArray);
+//            AllContactInfo.allPhoneIDtoPhoneNum.put(phId, contact.getMobilePhone());
+//            all.put("content", tmp);
+//            all.put("content_id", curID);
+//            AllContactInfo.allContactJsonArray.put(all);
+//        }
+//        AllContactInfo.allContactJsonObject.put("list", AllContactInfo.allContactJsonArray);
+//    }
     private void getAllContactList(){
         AllContactInfo.allContactList = new ArrayList<ContactInfo>();
         ContentResolver cr = getContentResolver();
         Cursor cur = cr.query(ContactsContract.Contacts.CONTENT_URI,
                 null, null, null, null);
 
-        ContactInfo contact;
+        ContactInfo contact = new ContactInfo();
         if (cur.getCount() > 0) {
             while (cur.moveToNext()) {
                 contact = new ContactInfo();
@@ -87,9 +154,11 @@ public class ContactsActivity extends AppCompatActivity {
                     while (pCur.moveToNext()) {
                         String phoneNo = pCur.getString(pCur.getColumnIndex(
                                 ContactsContract.CommonDataKinds.Phone.NUMBER));
-//                        Toast.makeText(ContactsActivity.this, "Name: " + name
-//                                + ", Phone No: " + phoneNo, Toast.LENGTH_SHORT).show();
+                        String phoneType = pCur.getString(pCur.getColumnIndex(
+                                ContactsContract.CommonDataKinds.Phone.TYPE));
                         contact.setMobilePhone(phoneNo);
+                        phoneType = contact.phoneTypeTable.get(phoneType);
+                        contact.phoneNumberTable.put(phoneType, phoneNo);
                     }
                     pCur.close();
                 }
@@ -110,20 +179,24 @@ public class ContactsActivity extends AppCompatActivity {
             tmp.put("fn", contact.getFirstName());
             tmp.put("ln", contact.getLastName());
             JSONArray phoneTypeArray = new JSONArray();
-            phoneTypeArray.put("mobile");
-            tmp.put("ph", phoneTypeArray);
             JSONArray phoneNumArray = new JSONArray();
-            String phId = new Integer(curID).toString()+"_0";
-            phoneNumArray.put(phId);
+            Set<String> types = contact.phoneNumberTable.keySet();
+            int phoneID = -1; //starts from 0
+            for(String phoneType: types){
+                phoneTypeArray.put(phoneType);
+                phoneID++;
+                String phId = new Integer(curID).toString()+"_"+new Integer(phoneID).toString();
+                phoneNumArray.put(phId);
+                AllContactInfo.allPhoneIDtoPhoneNum.put(phId, contact.phoneNumberTable.get(phoneType));
+            }
             tmp.put("phId", phoneNumArray);
-            AllContactInfo.allPhoneIDtoPhoneNum.put(phId, contact.getMobilePhone());
+            tmp.put("ph", phoneTypeArray);
             all.put("content", tmp);
             all.put("content_id", curID);
             AllContactInfo.allContactJsonArray.put(all);
         }
         AllContactInfo.allContactJsonObject.put("list", AllContactInfo.allContactJsonArray);
     }
-
 
 
 }
