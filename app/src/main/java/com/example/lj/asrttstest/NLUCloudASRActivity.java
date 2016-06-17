@@ -1,11 +1,14 @@
 package com.example.lj.asrttstest;
 
 import android.Manifest;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Handler;
+import android.provider.ContactsContract;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -21,6 +24,7 @@ import com.example.lj.asrttstest.dialog.CallingDomainProc;
 import com.example.lj.asrttstest.dialog.JsonParser;
 import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.AppInfo;
+import com.example.lj.asrttstest.info.ContactInfo;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
 import com.nuance.dragon.toolkit.audio.AudioType;
 import com.nuance.dragon.toolkit.audio.SpeechDetectionListener;
@@ -40,12 +44,15 @@ import com.nuance.dragon.toolkit.data.Data;
 import com.nuance.dragon.toolkit.util.Logger;
 import com.nuance.dragon.toolkit.util.WorkerThread;
 
+import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.UUID;
 
@@ -83,16 +90,14 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         resultModeSpinner.setEnabled(false);
 
         //my code here for jason parser initialization
-        jsonParser = new JsonParser();
         _ttsService = new TTSService(getApplicationContext());
 
-        //get IMEI number which is the value of uid
-        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        AppInfo.IMEInumber = telephonyManager.getDeviceId();
-
-        //start to upload contact information
-//        mCloudDataUploadService = new CloudDataUpload(NLUCloudASRActivity.this, resultEditText);
-//        mCloudDataUploadService.startDataUpload();
+        getAllContactList();
+        try{
+            getAllContactJsonArrayAndObject();
+        }catch (JSONException e){
+            e.printStackTrace();
+        }
 
         // First, grammar set-up
         final Handler uiHandler = new Handler();
@@ -178,12 +183,11 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                             } catch (JSONException e) {
                                 e.printStackTrace();
                             }
-                            Log.d("sss", "2");
-                            Log.d("sss", readableResult);
+//                            Log.d("sss", readableResult);
 //                            sendJsonToEmail(readableResult);
-                            String feedback = "I don't know what to do";
-                            String phoneNumber = "Error";
-                            jsonParser.processServerResponse(result.getDictionary().toJSON());
+                            String feedback = "";
+                            String phoneNumber = "";
+                            jsonParser = new JsonParser(result.getDictionary().toJSON());
                             feedback = jsonParser.getTtsText();
                             if(jsonParser.getDomain().equals("calling")){
                                 CallingDomainProc callingDomain
@@ -346,17 +350,22 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         // Customize ASR command spec
         Data.Dictionary customSettings = new  Data.Dictionary();
         customSettings.put("application", "TCL");
-        customSettings.put("application_session_id", String.valueOf(UUID.randomUUID()));
+        //original one from sample app;
+//        customSettings.put("application_session_id", String.valueOf(UUID.randomUUID()));
         customSettings.put("dictation_language", "eng-USA");
         //original one from sample app
 //        customSettings.put("dictation_type", "searchormessaging");
         customSettings.put("dictation_type", "nma_dm_main");
 
-        //Ji Li from data upload class
+        //Ji Li's setting
         // without the followings it still works fine
         customSettings.put("uid", AppInfo.IMEInumber);
         customSettings.put("nmaid", AppInfo.AppId);
         customSettings.put("application_name",  getApplicationContext().getString(R.string.app_name));
+        //enable or disable dialog, seems no effection
+        customSettings.put("nlps_use_adk", 1);
+        //should be the same during each dialog in an APP;
+        customSettings.put("application_session_id", AppInfo.applicationSessionID);
 
         RecogSpec retRecogSpec = new RecogSpec("DRAGON_NLU_ASR_CMD", customSettings, "AUDIO_INFO")
         {
@@ -394,10 +403,76 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return retRecogSpec;
     }
 
+
     private static String getTranscription(CloudRecognitionResult result)
     {
         Data.Dictionary appServerResults = result.getDictionary().getDictionary("appserver_results");
         Data.Dictionary transcriptionDict = appServerResults.getDictionary("payload").getSequence("actions").getDictionary(0);
         return transcriptionDict.getString("text").value;
+    }
+
+    private void getAllContactList(){
+        AllContactInfo.allContactList = new ArrayList<ContactInfo>();
+        ContentResolver cr = getContentResolver();
+        Cursor cur = cr.query(ContactsContract.Contacts.CONTENT_URI,
+                null, null, null, null);
+
+        ContactInfo contact;
+        if (cur.getCount() > 0) {
+            while (cur.moveToNext()) {
+                contact = new ContactInfo();
+
+                String id = cur.getString(
+                        cur.getColumnIndex(ContactsContract.Contacts._ID));
+                String name = cur.getString(cur.getColumnIndex(
+                        ContactsContract.Contacts.DISPLAY_NAME));
+                String[] nameList = name.split(" ");
+                contact.setFirstName(nameList[0]);
+                contact.setLastName(nameList[1]);
+                contact.setMobilePhone("0");
+
+                if (Integer.parseInt(cur.getString(cur.getColumnIndex(
+                        ContactsContract.Contacts.HAS_PHONE_NUMBER))) > 0) {
+                    Cursor pCur = cr.query(
+                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                            null,
+                            ContactsContract.CommonDataKinds.Phone.CONTACT_ID +" = ?",
+                            new String[]{id}, null);
+                    while (pCur.moveToNext()) {
+                        String phoneNo = pCur.getString(pCur.getColumnIndex(
+                                ContactsContract.CommonDataKinds.Phone.NUMBER));
+                        contact.setMobilePhone(phoneNo);
+                    }
+                    pCur.close();
+                }
+                AllContactInfo.allContactList.add(contact);
+            }
+        }
+    }
+
+    private void getAllContactJsonArrayAndObject() throws JSONException {
+        int curID = -1;
+        AllContactInfo.allContactJsonArray = new JSONArray();
+        AllContactInfo.allPhoneIDtoPhoneNum = new Hashtable<String, String>();
+        AllContactInfo.allContactJsonObject = new JSONObject();
+        for (ContactInfo contact: AllContactInfo.allContactList){
+            curID++;
+            JSONObject tmp = new JSONObject();
+            JSONObject all = new JSONObject();
+            tmp.put("fn", contact.getFirstName());
+            tmp.put("ln", contact.getLastName());
+            JSONArray phoneTypeArray = new JSONArray();
+            phoneTypeArray.put("mobile");
+            tmp.put("ph", phoneTypeArray);
+            JSONArray phoneNumArray = new JSONArray();
+            String phId = new Integer(curID).toString()+"_0";
+            phoneNumArray.put(phId);
+            tmp.put("phId", phoneNumArray);
+            AllContactInfo.allPhoneIDtoPhoneNum.put(phId, contact.getMobilePhone());
+            all.put("content", tmp);
+            all.put("content_id", curID);
+            AllContactInfo.allContactJsonArray.put(all);
+        }
+        AllContactInfo.allContactJsonObject.put("list", AllContactInfo.allContactJsonArray);
     }
 }

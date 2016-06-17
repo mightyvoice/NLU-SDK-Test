@@ -12,6 +12,8 @@ import android.widget.Button;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.upload.ContactsActivity;
 
+import java.util.UUID;
+
 public class MainActivity extends Activity {
 
     @Override
@@ -21,6 +23,7 @@ public class MainActivity extends Activity {
 
         TelephonyManager telephonyManager = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
         AppInfo.IMEInumber = telephonyManager.getDeviceId();
+        AppInfo.applicationSessionID = String.valueOf(UUID.randomUUID());
 
         final Button cloudRecognizerButton = (Button) findViewById(R.id.cloudRecognizerButton);
         cloudRecognizerButton.setOnClickListener(new View.OnClickListener()
