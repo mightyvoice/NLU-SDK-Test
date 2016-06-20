@@ -130,10 +130,9 @@ public class ContactsActivity extends AppCompatActivity {
         Cursor cur = cr.query(ContactsContract.Contacts.CONTENT_URI,
                 null, null, null, null);
 
-        ContactInfo contact = new ContactInfo();
         if (cur.getCount() > 0) {
             while (cur.moveToNext()) {
-                contact = new ContactInfo();
+                ContactInfo contact = new ContactInfo();
 
                 String id = cur.getString(
                         cur.getColumnIndex(ContactsContract.Contacts._ID));
@@ -143,7 +142,6 @@ public class ContactsActivity extends AppCompatActivity {
                 contact.setFirstName(nameList[0]);
                 contact.setLastName(nameList[1]);
                 contact.setMobilePhone("0");
-
                 if (Integer.parseInt(cur.getString(cur.getColumnIndex(
                         ContactsContract.Contacts.HAS_PHONE_NUMBER))) > 0) {
                     Cursor pCur = cr.query(
@@ -152,13 +150,13 @@ public class ContactsActivity extends AppCompatActivity {
                             ContactsContract.CommonDataKinds.Phone.CONTACT_ID +" = ?",
                             new String[]{id}, null);
                     while (pCur.moveToNext()) {
-                        String phoneNo = pCur.getString(pCur.getColumnIndex(
+                        String phoneNum = pCur.getString(pCur.getColumnIndex(
                                 ContactsContract.CommonDataKinds.Phone.NUMBER));
                         String phoneType = pCur.getString(pCur.getColumnIndex(
                                 ContactsContract.CommonDataKinds.Phone.TYPE));
-                        contact.setMobilePhone(phoneNo);
+                        contact.setMobilePhone(phoneNum);
                         phoneType = contact.phoneTypeTable.get(phoneType);
-                        contact.phoneNumberTable.put(phoneType, phoneNo);
+                        contact.phoneNumberTable.put(phoneType, phoneNum);
                     }
                     pCur.close();
                 }

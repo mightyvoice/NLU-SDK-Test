@@ -268,7 +268,7 @@ public class BaseDialogManager implements IDialogManager {
      */
     @Override
     public String parseDialogPhase() {
-        mDialogPhase = null;
+        mDialogPhase = "";
         JSONObject action = findActionByType(true);
         if (action != null)
             mDialogPhase = action.optJSONObject("dialogPhase").optString("value");
@@ -310,7 +310,7 @@ public class BaseDialogManager implements IDialogManager {
      */
     @Override
     public String parseIntent() {
-        mIntent = null;
+        mIntent = "";
         JSONObject action = findActionByType(BaseDialogManager.ACTION_TYPE_APPLICATION);
         if (action != null)
             mIntent = action.optJSONObject("action").optString("value");

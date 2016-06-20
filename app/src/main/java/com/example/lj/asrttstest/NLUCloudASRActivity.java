@@ -12,6 +12,7 @@ import android.provider.ContactsContract;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.telephony.SmsManager;
 import android.text.format.Time;
 import android.util.Log;
 import android.view.View;
@@ -22,6 +23,7 @@ import android.telephony.TelephonyManager;
 
 import com.example.lj.asrttstest.dialog.CallingDomainProc;
 import com.example.lj.asrttstest.dialog.JsonParser;
+import com.example.lj.asrttstest.dialog.MessageDomainProc;
 import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.info.ContactInfo;
@@ -94,6 +96,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 
         //my code here for jason parser initialization
         _ttsService = new TTSService(getApplicationContext());
+        AppInfo.applicationSessionID = String.valueOf(UUID.randomUUID());
 
         getAllContactList();
         try{
@@ -192,12 +195,13 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                             String phoneNumber = "";
                             jsonParser = new JsonParser(result.getDictionary().toJSON());
                             feedback = jsonParser.getTtsText();
-                            if(jsonParser.getDomain().equals("calling")){
+                            _ttsService.performTTS(getApplicationContext(), feedback);
+                            showResults(resultEditText, feedback);
+                            if(jsonParser.getDomain().equals("calling") && jsonParser.getIntent().equals("call") ){
                                 CallingDomainProc callingDomain
                                         = new CallingDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
                                 callingDomain.process();
                                 phoneNumber = callingDomain.getPhoneNumber();
-                                showResults(resultEditText, feedback);
                                 Log.d("sss", phoneNumber);
                                 if (!phoneNumber.equals("") && ActivityCompat.checkSelfPermission(getApplicationContext(),
                                         Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
@@ -206,7 +210,19 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                                     startActivity(callIntent);
                                 }
                             }
-                            _ttsService.performTTS(getApplicationContext(), feedback);
+                            if(jsonParser.getDomain().equals("messaging") && jsonParser.getIntent().equals("send")){
+                                MessageDomainProc messageDomainProc
+                                        = new MessageDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
+                                messageDomainProc.process();
+                                phoneNumber = messageDomainProc.getPhoneNumber();
+                                Log.d("sss", phoneNumber);
+                                Log.d("sss", messageDomainProc.getMessageContent());
+                                if (!phoneNumber.equals("") && ActivityCompat.checkSelfPermission(getApplicationContext(),
+                                        Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
+                                    SmsManager smsManager = SmsManager.getDefault();
+                                    smsManager.sendTextMessage(phoneNumber, null, messageDomainProc.getMessageContent(), null, null);
+                                }
+                            }
                         }
                     }
 

@@ -61,14 +61,6 @@ public class ContactInfo {
         return mobilePhone;
     }
 
-    public Hashtable<String, String> getPhoneNumberTable() {
-        return phoneNumberTable;
-    }
-
-    public void setPhoneNumberTable(Hashtable<String, String> phoneNumberTable) {
-        this.phoneNumberTable = phoneNumberTable;
-    }
-
     public void setId(int _id) {
         this.id = _id;
     }
