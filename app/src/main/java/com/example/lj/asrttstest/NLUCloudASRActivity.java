@@ -38,11 +38,16 @@ import com.nuance.dragon.toolkit.cloudservices.CloudConfig;
 import com.nuance.dragon.toolkit.cloudservices.CloudServices;
 import com.nuance.dragon.toolkit.cloudservices.DataParam;
 import com.nuance.dragon.toolkit.cloudservices.DictionaryParam;
+import com.nuance.dragon.toolkit.cloudservices.Transaction;
+import com.nuance.dragon.toolkit.cloudservices.TransactionError;
+import com.nuance.dragon.toolkit.cloudservices.TransactionResult;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognitionError;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognitionResult;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognizer;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.RecogSpec;
 import com.nuance.dragon.toolkit.data.Data;
+import com.nuance.dragon.toolkit.data.Data.Sequence;
+import com.nuance.dragon.toolkit.data.Data.Dictionary;
 import com.nuance.dragon.toolkit.util.Logger;
 import com.nuance.dragon.toolkit.util.WorkerThread;
 
@@ -53,10 +58,16 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.ObjectInputStream;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.UUID;
 
 public class NLUCloudASRActivity extends AppCompatActivity {
@@ -78,6 +89,15 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private CloudDataUpload mCloudDataUploadService;
 
     private EditText resultEditText;
+
+    /** The default NCS NLU App Server command. Default is DRAGON_NLU_APPSERVER_CMD. */
+    private static final String DEFAULT_APPSERVER_COMMAND = "DRAGON_NLU_APPSERVER_CMD";
+
+    /** The default nlu profile name. Default value is REFERENCE_NCS. */
+    private static final String DEFAULT_NLU_PROFILE = "REFERENCE_NCS";
+
+    /** The default language to use. Set to eng-USA. Override available languages in the configuration file. */
+    private static final String DEFAULT_LANGUAGE = "eng-USA";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -197,27 +217,32 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                             feedback = jsonParser.getTtsText();
                             _ttsService.performTTS(getApplicationContext(), feedback);
                             showResults(resultEditText, feedback);
-                            if(jsonParser.getDomain().equals("calling") && jsonParser.getIntent().equals("call") ){
+                            if(jsonParser.getDomain().equals("calling")){
                                 CallingDomainProc callingDomain
                                         = new CallingDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
                                 callingDomain.process();
-                                phoneNumber = callingDomain.getPhoneNumber();
+                                phoneNumber = callingDomain.phoneNumber;
                                 Log.d("sss", phoneNumber);
-                                if (!phoneNumber.equals("") && ActivityCompat.checkSelfPermission(getApplicationContext(),
+                                if(jsonParser.getDialogPhase().equals("disambiguation")){
+                                    Log.d("sss", callingDomain.ambiguityList.toString());
+                                }
+                                if (jsonParser.getIntent().equals("call") && !phoneNumber.equals("") && ActivityCompat.checkSelfPermission(getApplicationContext(),
                                         Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
                                     Intent callIntent = new Intent(Intent.ACTION_CALL);
                                     callIntent.setData(Uri.parse("tel:" + phoneNumber));
                                     startActivity(callIntent);
                                 }
                             }
-                            if(jsonParser.getDomain().equals("messaging") && jsonParser.getIntent().equals("send")){
+                            if(jsonParser.getDomain().equals("messaging")){
                                 MessageDomainProc messageDomainProc
                                         = new MessageDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
                                 messageDomainProc.process();
                                 phoneNumber = messageDomainProc.getPhoneNumber();
                                 Log.d("sss", phoneNumber);
                                 Log.d("sss", messageDomainProc.getMessageContent());
-                                if (!phoneNumber.equals("") && ActivityCompat.checkSelfPermission(getApplicationContext(),
+                                if (jsonParser.getIntent().equals("send") &&
+                                        !phoneNumber.equals("") &&
+                                        ActivityCompat.checkSelfPermission(getApplicationContext(),
                                         Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
                                     SmsManager smsManager = SmsManager.getDefault();
                                     smsManager.sendTextMessage(phoneNumber, null, messageDomainProc.getMessageContent(), null, null);
@@ -504,4 +529,5 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         AllContactInfo.allContactJsonObject.put("list", AllContactInfo.allContactJsonArray);
         resultEditText.setText(AllContactInfo.allContactJsonObject.toString(4));
     }
+
 }

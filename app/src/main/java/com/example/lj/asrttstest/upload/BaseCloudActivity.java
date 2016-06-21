@@ -72,7 +72,7 @@ public class BaseCloudActivity implements ICloudActivity {
      *
      * @param c A handle to the application mContext
      */
-    BaseCloudActivity(Context c) {
+    public BaseCloudActivity(Context c) {
         mContext = c;
     }
 

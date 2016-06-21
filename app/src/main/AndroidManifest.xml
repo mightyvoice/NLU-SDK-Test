@@ -15,10 +15,8 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.CALL_PHONE"/>
+    <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.SEND_SMS" />
-
-
 
     <application
         android:allowBackup="true"
@@ -39,7 +37,8 @@
         <activity android:name=".CloudDataUploadActivity" />
         <activity android:name=".upload.DataUploadActivity" />
         <activity android:name=".upload.BaseCloudActivity" />
-        <activity android:name=".upload.ContactsActivity"></activity>
+        <activity android:name=".upload.ContactsActivity" />
+        <activity android:name=".dialog.DisambiguationActivity"></activity>
     </application>
 
 </manifest>
