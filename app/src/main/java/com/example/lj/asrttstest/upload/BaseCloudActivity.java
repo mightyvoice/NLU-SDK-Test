@@ -32,7 +32,7 @@ public class BaseCloudActivity implements ICloudActivity {
     private static final String TAG = "NMT-BaseCloudActivity";
 
     /** The application mContext. */
-    final Context mContext;
+    protected final Context mContext;
 
     /** The default language to use. Set to eng-USA. Override available languages in the configuration file. */
     private static final String DEFAULT_LANGUAGE = "eng-USA";
@@ -50,7 +50,7 @@ public class BaseCloudActivity implements ICloudActivity {
     //protected static final String DEFAULT_LOCATION = null;
 
     /** An instance of CloudServices. */
-    CloudServices mCloudServices;
+    protected CloudServices mCloudServices;
 
     /** The application session id. */
     String mAppSessionId = null;
@@ -109,7 +109,7 @@ public class BaseCloudActivity implements ICloudActivity {
      *
      * @return true, if successful
      */
-    boolean initCloudServices() {
+    protected boolean initCloudServices() {
 
         releaseCloudServices();
 
@@ -192,7 +192,7 @@ public class BaseCloudActivity implements ICloudActivity {
      *
      * @return the dictation language
      */
-    String getLanguage() {
+    protected String getLanguage() {
         if( mLanguage != null )
             return mLanguage;
 

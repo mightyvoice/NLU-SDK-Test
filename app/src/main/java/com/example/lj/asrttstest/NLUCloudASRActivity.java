@@ -22,6 +22,7 @@ import android.widget.Spinner;
 import android.telephony.TelephonyManager;
 
 import com.example.lj.asrttstest.dialog.CallingDomainProc;
+import com.example.lj.asrttstest.dialog.DisambiguationActivity;
 import com.example.lj.asrttstest.dialog.JsonParser;
 import com.example.lj.asrttstest.dialog.MessageDomainProc;
 import com.example.lj.asrttstest.info.AllContactInfo;
@@ -193,14 +194,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                         if (resultCount == 1) {
                             ///////// 1st result is the transcription
 
-//                            Log.d("sss", "1");
-//                            try {
-//                                Log.d("sss", result.getDictionary().toJSON().toString(4));
-//                            } catch (JSONException e) {
-//                                e.printStackTrace();
-//                            }
-//                            showResults(resultEditText, getTranscription(result));
-
                         } else {
                             ///////// 2nd result is the ADK/NLU action
                             String readableResult = "Error";
@@ -225,6 +218,15 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                                 Log.d("sss", phoneNumber);
                                 if(jsonParser.getDialogPhase().equals("disambiguation")){
                                     Log.d("sss", callingDomain.ambiguityList.toString());
+                                    JSONObject data = new JSONObject();
+                                    try {
+                                        data.putOpt("message", "SLOTS:GENERIC_ORDER:1");
+                                        DisambiguationActivity disambiguation = new DisambiguationActivity(getApplicationContext(),callingDomain.ambiguityList);
+//                                        disambiguation.doDataExchange(data, null);
+                                        disambiguation.startAdkSubdialog(data, null);
+                                    } catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
                                 }
                                 if (jsonParser.getIntent().equals("call") && !phoneNumber.equals("") && ActivityCompat.checkSelfPermission(getApplicationContext(),
                                         Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
