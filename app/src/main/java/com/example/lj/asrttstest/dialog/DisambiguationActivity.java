@@ -98,9 +98,24 @@ public class DisambiguationActivity extends BaseCloudActivity {
 
     private ArrayList<String> ambigutyList;
 
+    private Integer choosenID = 1;
+
     public DisambiguationActivity(Context _context, ArrayList<String> _ambiguty){
         super(_context);
         ambigutyList = _ambiguty;
+        initCloudServices();
+    }
+
+    public DisambiguationActivity(Context _context, ArrayList<String> _ambiguty, Integer _chosenID){
+        super(_context);
+        ambigutyList = _ambiguty;
+        choosenID = _chosenID;
+        initCloudServices();
+    }
+
+    public DisambiguationActivity(Context _context, Integer _chosenID){
+        super(_context);
+        choosenID = _chosenID;
         initCloudServices();
     }
 
@@ -127,7 +142,9 @@ public class DisambiguationActivity extends BaseCloudActivity {
             //appserver_data.put("dialog_seq_id", 2);
 
             //Ji's code
-            appserver_data.put("message", "SLOTS:GENERIC_ORDER:1");
+            String choose = "SLOTS:GENERIC_ORDER:"+choosenID.toString();
+            appserver_data.put("message", choose);
+//            appserver_data.put("message", "SLOTS:GENERIC_ORDER:1");
 
             root.put("appserver_data", appserver_data);
             root.put("nlsml_results", 1);

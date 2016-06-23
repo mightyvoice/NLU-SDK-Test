@@ -8,11 +8,12 @@ import com.example.lj.asrttstest.info.AllContactInfo;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
 /**
  * Created by lj on 16/6/16.
  */
 public class MessageDomainProc extends DomainProc{
-   private JsonParser jsonParser;
    private static final String TAG = "MessageDomainProc";
    private String phoneNumber = "";
    private String messageContent = "";
@@ -56,6 +57,41 @@ public class MessageDomainProc extends DomainProc{
               break;
           }
       }
+   }
+
+   @Override
+   public void getAmbiguityList(){
+       ambiguityList = new ArrayList<String>();
+       JSONArray curArray = actionArray;
+       for(int i = 0; i < curArray.length(); i++){
+           JSONObject curObject = curArray.optJSONObject(i);
+           curObject = curObject.optJSONObject("value");
+           if(curObject.has("entries")){
+               JSONArray entries = curObject.optJSONObject("entries").optJSONArray("value");
+               for(int j = 0; j < entries.length(); j++){
+                   JSONObject entry = entries.optJSONObject(j);
+                   entry = entry.optJSONObject("value");
+                   entry = entry.optJSONObject("item");
+                   entry = entry.optJSONObject("value");
+                   //if there are several names
+                   if(entry.has("firstName")){
+                       String name = entry.optJSONObject("firstName").optString("value");
+                       if(entry.has("lastName")){
+                           name = name + " " + entry.optJSONObject("lastName").optString("value");
+                       }
+                       ambiguityList.add(name);
+                       continue;
+                   }
+                   //if there are several phone types
+                   if(entry.has("type")){
+                       String phoneType = entry.optJSONObject("type").optString("value");
+                       ambiguityList.add(phoneType);
+                       continue;
+                   }
+               }
+               break;
+           }
+       }
    }
 
    public String getPhoneNumber(){

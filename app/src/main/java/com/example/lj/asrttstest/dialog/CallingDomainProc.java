@@ -19,8 +19,6 @@ public class CallingDomainProc extends DomainProc {
 
     public String phoneNumber;
 
-    //if there is ambuguity, put all the returned value in this list
-    public ArrayList<String> ambiguityList = null;
 
     public CallingDomainProc(Context _context, JSONArray _actionArray, String _ttsText) {
         super(_context, _actionArray, _ttsText);
@@ -65,7 +63,8 @@ public class CallingDomainProc extends DomainProc {
         }
     }
 
-    private void getAmbiguityList(){
+    @Override
+    public void getAmbiguityList(){
         ambiguityList = new ArrayList<String>();
         JSONArray curArray = actionArray;
         for(int i = 0; i < curArray.length(); i++){
@@ -78,6 +77,7 @@ public class CallingDomainProc extends DomainProc {
                     entry = entry.optJSONObject("value");
                     entry = entry.optJSONObject("item");
                     entry = entry.optJSONObject("value");
+                    //if there are several names
                     if(entry.has("firstName")){
                         String name = entry.optJSONObject("firstName").optString("value");
                         if(entry.has("lastName")){
@@ -86,6 +86,7 @@ public class CallingDomainProc extends DomainProc {
                         ambiguityList.add(name);
                         continue;
                     }
+                    //if there are several phone types
                     if(entry.has("type")){
                         String phoneType = entry.optJSONObject("type").optString("value");
                         ambiguityList.add(phoneType);
