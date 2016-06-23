@@ -2,6 +2,7 @@ package com.example.lj.asrttstest.upload;
 
 /**
  * Created by lj on 16/6/9.
+ * From nuance sample code
  */
 interface ICloudActivity {
 

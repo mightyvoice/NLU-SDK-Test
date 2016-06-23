@@ -89,7 +89,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private WorkerThread _workerThread;
     private JsonParser jsonParser;
     private TTSService _ttsService;
-    private CloudDataUpload mCloudDataUploadService;
 
     private EditText resultEditText;
 

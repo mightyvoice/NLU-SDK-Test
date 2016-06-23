@@ -34,7 +34,6 @@
         <activity android:name=".CloudASRActivity" />
         <activity android:name=".NLUCloudASRActivity" />
         <activity android:name=".TTSCloudActivity" />
-        <activity android:name=".CloudDataUploadActivity" />
         <activity android:name=".upload.DataUploadActivity" />
         <activity android:name=".upload.BaseCloudActivity" />
         <activity android:name=".upload.ContactsActivity" />

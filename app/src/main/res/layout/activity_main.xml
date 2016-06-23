@@ -19,13 +19,9 @@
                 android:text="@string/Cloud_Vocalizer"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content" />
+
             <Button
-                android:id="@+id/cloudDataUploaderButton"
-                android:text="@string/Cloud_Data_Uploader"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content" />
-            <Button
-                android:id="@+id/getContactButton"
+                android:id="@+id/uploadContactButton"
                 android:text="Upload Contacts"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content" />
