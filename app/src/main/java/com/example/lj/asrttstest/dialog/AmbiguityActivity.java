@@ -11,13 +11,14 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
 import com.example.lj.asrttstest.R;
+import com.example.lj.asrttstest.info.Global;
 
 import java.util.ArrayList;
 
 public class AmbiguityActivity extends AppCompatActivity {
 
     private ListView ambiguityListView;
-    private String[] ambiguityList;
+    private String[] ambiguityArray;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,28 +26,22 @@ public class AmbiguityActivity extends AppCompatActivity {
         setContentView(R.layout.activity_ambiguity);
         resizeDisplay();
 
-        Intent intent=getIntent();
-
-        ArrayList<String> tmp = (ArrayList<String>) intent.getStringArrayListExtra("list");
-        ambiguityList = new String[tmp.size()];
-        for(int i = 0; i < tmp.size(); i++){
-            ambiguityList[i] = tmp.get(i);
+        //only array works, arrayList does not work here
+        ambiguityArray = new String[Global.ambiguityList.size()];
+        for(int i = 0; i < Global.ambiguityList.size(); i++){
+            ambiguityArray[i] = Global.ambiguityList.get(i);
         }
-
-        Log.d("ssss", ambiguityList.toString());
 
         ambiguityListView = (ListView) findViewById(R.id.AmbiguityListView);
         ArrayAdapter<String> listAdapter = new ArrayAdapter(this,
-                android.R.layout.simple_list_item_1, ambiguityList);
+                android.R.layout.simple_list_item_1, ambiguityArray);
         ambiguityListView.setAdapter(listAdapter);
 
         ambiguityListView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
             @Override
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
-                Intent intent=new Intent();
-                intent.putExtra("chosenID", id);
-                setResult(1, intent);
+                Global.ambiguityListChosenID = (int)id;
                 finish();
             }
         });

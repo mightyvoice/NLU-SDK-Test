@@ -15,6 +15,7 @@ import android.util.Log;
 import com.example.lj.asrttstest.R;
 import com.example.lj.asrttstest.TTSService;
 import com.example.lj.asrttstest.info.AppInfo;
+import com.example.lj.asrttstest.info.Global;
 import com.example.lj.asrttstest.upload.BaseCloudActivity;
 import com.nuance.dragon.toolkit.audio.AudioType;
 import com.nuance.dragon.toolkit.cloudservices.CloudConfig;
@@ -156,7 +157,7 @@ public class DisambiguationActivity extends BaseCloudActivity {
             root.put("end", 0);
             root.put("text", "");
 
-            Log.d(TAG, "ADK Subdialog Request Data: " + root.toString());
+//            Log.d(TAG, "ADK Subdialog Request Data: " + root.toString());
             DictionaryParam RequestInfo = new DictionaryParam("REQUEST_INFO", root);
 
             Log.d(TAG, "Creating Start ADK Subdialog Transaction...");
@@ -204,8 +205,8 @@ public class DisambiguationActivity extends BaseCloudActivity {
                     }
                 }, 3000, true);
 
-            Log.d(TAG, "settings: " + settings.toString());
-            Log.d(TAG, "requestInfo: " + RequestInfo.toString());
+//            Log.d(TAG, "settings: " + settings.toString());
+//            Log.d(TAG, "requestInfo: " + RequestInfo.toString());
 
             this.mCloudServices.addTransaction(dut, 1);
             dut.addParam(RequestInfo);
@@ -444,16 +445,20 @@ public class DisambiguationActivity extends BaseCloudActivity {
             phoneNumber = callingDomain.phoneNumber;
             Log.d("sss", phoneNumber);
             if(jsonParser.getDialogPhase().equals("disambiguation")){
-                Log.d("sss", callingDomain.ambiguityList.toString());
-                JSONObject data = new JSONObject();
-                try {
-                    data.putOpt("message", "SLOTS:GENERIC_ORDER:1");
-                    DisambiguationActivity disambiguation = new DisambiguationActivity(mContext,callingDomain.ambiguityList);
-//                                        disambiguation.doDataExchange(data, null);
-                    disambiguation.startAdkSubdialog(data, null);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+//                Log.d("sss", callingDomain.ambiguityList.toString());
+//                JSONObject data = new JSONObject();
+//                try {
+//                    data.putOpt("message", "SLOTS:GENERIC_ORDER:1");
+//                    DisambiguationActivity disambiguation = new DisambiguationActivity(mContext,callingDomain.ambiguityList);
+////                                        disambiguation.doDataExchange(data, null);
+//                    disambiguation.startAdkSubdialog(data, null);
+//                } catch (JSONException e) {
+//                    e.printStackTrace();
+//                }
+                Global.ambiguityListChosenID = -1;
+                Intent localIntent = new Intent(mContext, AmbiguityActivity.class);
+                localIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                mContext.startActivity(localIntent);
             }
             if (jsonParser.getIntent().equals("call") && !phoneNumber.equals("") && ActivityCompat.checkSelfPermission(mContext,
                     Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {

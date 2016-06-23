@@ -29,6 +29,7 @@ import com.example.lj.asrttstest.dialog.MessageDomainProc;
 import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.info.ContactInfo;
+import com.example.lj.asrttstest.info.Global;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
 import com.nuance.dragon.toolkit.audio.AudioType;
 import com.nuance.dragon.toolkit.audio.SpeechDetectionListener;
@@ -220,18 +221,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                                 phoneNumber = callingDomain.phoneNumber;
                                 Log.d("sss", phoneNumber);
                                 if(jsonParser.getDialogPhase().equals("disambiguation")){
-                                    Log.d("sss", callingDomain.ambiguityList.toString());
-//                                    JSONObject data = new JSONObject();
-//                                    try {
-//                                        data.putOpt("message", "SLOTS:GENERIC_ORDER:1");
-//                                        DisambiguationActivity disambiguation = new DisambiguationActivity(getApplicationContext(),callingDomain.ambiguityList);
-//                                        disambiguation.startAdkSubdialog(data, null);
-//                                    } catch (JSONException e) {
-//                                        e.printStackTrace();
-//                                    }
                                     Intent localIntent = new Intent(NLUCloudASRActivity.this, AmbiguityActivity.class);
-                                    localIntent.putStringArrayListExtra("list", callingDomain.ambiguityList);
-                                    NLUCloudASRActivity.this.startActivityForResult(localIntent, 1);
+                                    NLUCloudASRActivity.this.startActivity(localIntent);
                                 }
                                 if (jsonParser.getIntent().equals("call") && !phoneNumber.equals("") && ActivityCompat.checkSelfPermission(getApplicationContext(),
                                         Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
@@ -247,6 +238,11 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                                 phoneNumber = messageDomainProc.getPhoneNumber();
                                 Log.d("sss", phoneNumber);
                                 Log.d("sss", messageDomainProc.getMessageContent());
+                                if(jsonParser.getDialogPhase().equals("disambiguation")){
+//                                    sendJsonToEmail(readableResult);
+                                    Intent localIntent = new Intent(NLUCloudASRActivity.this, AmbiguityActivity.class);
+                                    NLUCloudASRActivity.this.startActivity(localIntent);
+                                }
                                 if (jsonParser.getIntent().equals("send") &&
                                         !phoneNumber.equals("") &&
                                         ActivityCompat.checkSelfPermission(getApplicationContext(),
@@ -539,14 +535,20 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.d("ssss", "return from the other activity");
-        if(requestCode == 1 && resultCode == 1){
-            ambiguityChosenID = data.getIntExtra("chosenID", 0);
+//        Log.d("ssss", "return from the other activity");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d("ssss", "restart NLU");
+        if (Global.ambiguityListChosenID > -1) {
+            JSONObject data = new JSONObject();
             try {
-                JSONObject d = new JSONObject();
-                d.putOpt("ssss", ambiguityChosenID);
-                DisambiguationActivity disambiguation = new DisambiguationActivity(getApplicationContext(), ambiguityChosenID+1);
-                disambiguation.startAdkSubdialog(d, null);
+                data.putOpt("message", "SLOTS:GENERIC_ORDER:1");
+                DisambiguationActivity disambiguation = new DisambiguationActivity(getApplicationContext(), Global.ambiguityList);
+                disambiguation.startAdkSubdialog(data, null);
+                Global.ambiguityListChosenID = -1;
             } catch (JSONException e) {
                 e.printStackTrace();
             }

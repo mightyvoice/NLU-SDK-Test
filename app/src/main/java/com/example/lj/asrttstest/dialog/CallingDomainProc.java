@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.example.lj.asrttstest.info.AllContactInfo;
+import com.example.lj.asrttstest.info.Global;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -65,7 +66,7 @@ public class CallingDomainProc extends DomainProc {
 
     @Override
     public void getAmbiguityList(){
-        ambiguityList = new ArrayList<String>();
+        Global.ambiguityList = new ArrayList<String>();
         JSONArray curArray = actionArray;
         for(int i = 0; i < curArray.length(); i++){
             JSONObject curObject = curArray.optJSONObject(i);
@@ -83,13 +84,13 @@ public class CallingDomainProc extends DomainProc {
                         if(entry.has("lastName")){
                             name = name + " " + entry.optJSONObject("lastName").optString("value");
                         }
-                        ambiguityList.add(name);
+                        Global.ambiguityList.add(name);
                         continue;
                     }
                     //if there are several phone types
                     if(entry.has("type")){
                         String phoneType = entry.optJSONObject("type").optString("value");
-                        ambiguityList.add(phoneType);
+                        Global.ambiguityList.add(phoneType);
                         continue;
                     }
                 }
