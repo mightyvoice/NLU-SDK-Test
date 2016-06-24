@@ -16,10 +16,14 @@ import android.telephony.SmsManager;
 import android.text.format.Time;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.telephony.TelephonyManager;
+import android.widget.TextView;
 
 import com.example.lj.asrttstest.dialog.AmbiguityActivity;
 import com.example.lj.asrttstest.dialog.CallingDomainProc;
@@ -90,13 +94,16 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private JsonParser jsonParser;
     private TTSService ttsService;
 
-    private EditText resultEditText;
+    private TextView resultEditText;
+
+    private ListView ambiguityListView;
+    private ArrayAdapter<String> ambiguityListAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_cloud_asr);
-        resultEditText = (EditText) findViewById(R.id.cloudResultEditText);
+        resultEditText = (TextView) findViewById(R.id.cloudResultEditText);
         final Button startRecognitionButton = (Button) findViewById(R.id.startCloudRecognitionButton);
         final Button stopRecognitionButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
         final Button cancelButton = (Button) findViewById(R.id.cancelCloudRecognitionButton);
@@ -111,12 +118,20 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         ttsService = new TTSService(getApplicationContext());
         AppInfo.applicationSessionID = String.valueOf(UUID.randomUUID());
 
-        getAllContactList();
-        try{
-            getAllContactJsonArrayAndObject();
-        }catch (JSONException e){
-            e.printStackTrace();
-        }
+        //only array works, arrayList does not work here
+        Global.ambiguityList = new ArrayList<>();
+        ambiguityListView = (ListView) findViewById(R.id.ambiguityListView);
+        ambiguityListAdapter = new ArrayAdapter(this,
+                android.R.layout.simple_list_item_1, Global.ambiguityList);
+        ambiguityListView.setAdapter(ambiguityListAdapter);
+        ambiguityListView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view,
+                                    int position, long id) {
+                Global.ambiguityListChosenID = (int)id;
+                Log.d("sss", "Click "+new Integer((int)id).toString());
+            }
+        });
 
         // First, grammar set-up
         final Handler uiHandler = new Handler();
@@ -213,8 +228,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 
                                 //if there is ambiguty
                                 if(jsonParser.getDialogPhase().equals("disambiguation")){
-                                    Intent localIntent = new Intent(NLUCloudASRActivity.this, AmbiguityActivity.class);
-                                    NLUCloudASRActivity.this.startActivity(localIntent);
+                                    ambiguityListAdapter.notifyDataSetChanged();
                                 }
 
                                 //if it is ready to call
@@ -238,8 +252,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                                 //if there is ambiguity
                                 if(jsonParser.getDialogPhase().equals("disambiguation")){
 //                                    sendJsonToEmail(readableResult);
-                                    Intent localIntent = new Intent(NLUCloudASRActivity.this, AmbiguityActivity.class);
-                                    NLUCloudASRActivity.this.startActivity(localIntent);
+                                    ambiguityListAdapter.notifyDataSetChanged();
                                 }
 
                                 //if it is ready to send the message
@@ -357,7 +370,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         }
     }
 
-    private void showResults(EditText textbox, String result)
+    private void showResults(TextView textbox, String result)
     {
         Logger.debug(this, "" + result);
         if (result == null)
@@ -450,7 +463,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return retRecogSpec;
     }
 
-
     private static String getTranscription(CloudRecognitionResult result)
     {
         Data.Dictionary appServerResults = result.getDictionary().getDictionary("appserver_results");
@@ -458,100 +470,4 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return transcriptionDict.getString("text").value;
     }
 
-    private void getAllContactList(){
-        AllContactInfo.allContactList = new ArrayList<ContactInfo>();
-        ContentResolver cr = getContentResolver();
-        Cursor cur = cr.query(ContactsContract.Contacts.CONTENT_URI,
-                null, null, null, null);
-
-        ContactInfo contact = new ContactInfo();
-        if (cur.getCount() > 0) {
-            while (cur.moveToNext()) {
-                contact = new ContactInfo();
-
-                String id = cur.getString(
-                        cur.getColumnIndex(ContactsContract.Contacts._ID));
-                String name = cur.getString(cur.getColumnIndex(
-                        ContactsContract.Contacts.DISPLAY_NAME));
-                String[] nameList = name.split(" ");
-                contact.setFirstName(nameList[0]);
-                contact.setLastName(nameList[1]);
-                contact.setMobilePhone("0");
-
-                if (Integer.parseInt(cur.getString(cur.getColumnIndex(
-                        ContactsContract.Contacts.HAS_PHONE_NUMBER))) > 0) {
-                    Cursor pCur = cr.query(
-                            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                            null,
-                            ContactsContract.CommonDataKinds.Phone.CONTACT_ID +" = ?",
-                            new String[]{id}, null);
-                    while (pCur.moveToNext()) {
-                        String phoneNo = pCur.getString(pCur.getColumnIndex(
-                                ContactsContract.CommonDataKinds.Phone.NUMBER));
-                        String phoneType = pCur.getString(pCur.getColumnIndex(
-                                ContactsContract.CommonDataKinds.Phone.TYPE));
-                        contact.setMobilePhone(phoneNo);
-                        phoneType = contact.phoneTypeTable.get(phoneType);
-                        contact.phoneNumberTable.put(phoneType, phoneNo);
-                    }
-                    pCur.close();
-                }
-                AllContactInfo.allContactList.add(contact);
-            }
-        }
-    }
-
-    private void getAllContactJsonArrayAndObject() throws JSONException {
-        int curID = -1;
-        AllContactInfo.allContactJsonArray = new JSONArray();
-        AllContactInfo.allPhoneIDtoPhoneNum = new Hashtable<String, String>();
-        AllContactInfo.allContactJsonObject = new JSONObject();
-        for (ContactInfo contact: AllContactInfo.allContactList){
-            curID++;
-            JSONObject tmp = new JSONObject();
-            JSONObject all = new JSONObject();
-            tmp.put("fn", contact.getFirstName());
-            tmp.put("ln", contact.getLastName());
-            JSONArray phoneTypeArray = new JSONArray();
-            JSONArray phoneNumArray = new JSONArray();
-            Set<String> types = contact.phoneNumberTable.keySet();
-            int phoneID = -1; //starts from 0
-            for(String phoneType: types){
-                phoneTypeArray.put(phoneType);
-                phoneID++;
-                String phId = new Integer(curID).toString()+"_"+new Integer(phoneID).toString();
-                phoneNumArray.put(phId);
-                AllContactInfo.allPhoneIDtoPhoneNum.put(phId, contact.phoneNumberTable.get(phoneType));
-            }
-            tmp.put("phId", phoneNumArray);
-            tmp.put("ph", phoneTypeArray);
-            all.put("content", tmp);
-            all.put("content_id", curID);
-            AllContactInfo.allContactJsonArray.put(all);
-        }
-        AllContactInfo.allContactJsonObject.put("list", AllContactInfo.allContactJsonArray);
-        resultEditText.setText(AllContactInfo.allContactJsonObject.toString(4));
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        Log.d("ssss", "return from the other activity");
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d("ssss", "restart NLU");
-        if (Global.ambiguityListChosenID > -1) {
-            JSONObject data = new JSONObject();
-            try {
-                data.putOpt("message", "SLOTS:GENERIC_ORDER:1");
-                DisambiguationActivity disambiguation = new DisambiguationActivity(getApplicationContext(), Global.ambiguityList);
-                disambiguation.startAdkSubdialog(data, null);
-                Global.ambiguityListChosenID = -1;
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 }

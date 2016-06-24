@@ -66,7 +66,7 @@ public class CallingDomainProc extends DomainProc {
 
     @Override
     public void getAmbiguityList(){
-        Global.ambiguityList = new ArrayList<String>();
+        Global.ambiguityList.clear();
         JSONArray curArray = actionArray;
         for(int i = 0; i < curArray.length(); i++){
             JSONObject curObject = curArray.optJSONObject(i);
