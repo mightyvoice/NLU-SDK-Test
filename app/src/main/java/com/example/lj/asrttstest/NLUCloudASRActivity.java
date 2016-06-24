@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Handler;
 import android.provider.ContactsContract;
@@ -28,6 +29,7 @@ import android.widget.TextView;
 import com.example.lj.asrttstest.dialog.AmbiguityActivity;
 import com.example.lj.asrttstest.dialog.CallingDomainProc;
 import com.example.lj.asrttstest.dialog.DisambiguationActivity;
+import com.example.lj.asrttstest.dialog.IRdomain;
 import com.example.lj.asrttstest.dialog.JsonParser;
 import com.example.lj.asrttstest.dialog.MessageDomainProc;
 import com.example.lj.asrttstest.info.AllContactInfo;
@@ -69,6 +71,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
@@ -99,6 +102,21 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private ListView ambiguityListView;
     private ArrayAdapter<String> ambiguityListAdapter;
 
+    /** The default language to use. Set to eng-USA. Override available languages in the configuration file. */
+    private static final String DEFAULT_LANGUAGE = "eng-USA";
+
+    /** An instance of the selected language to use. */
+    private String mLanguage = null;
+
+    /** The default NCS NLU App Server command. Default is DRAGON_NLU_APPSERVER_CMD. */
+    private static final String DEFAULT_APPSERVER_COMMAND = "DRAGON_NLU_APPSERVER_CMD";
+
+    /** The default nlu profile name. Default value is REFERENCE_NCS. */
+    private static final String DEFAULT_NLU_PROFILE = "REFERENCE_NCS";
+
+    /** The nlu profile. */
+    private String mNluProfile = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -128,8 +146,12 @@ public class NLUCloudASRActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view,
                                     int position, long id) {
-                Global.ambiguityListChosenID = (int)id;
+                //start from 1
+                Global.ambiguityList.clear();
+                ambiguityListAdapter.notifyDataSetChanged();
+                Global.ambiguityListChosenID = (int)id+1;
                 Log.d("sss", "Click "+new Integer((int)id).toString());
+                startAdkSubdialog(null);
             }
         });
 
@@ -162,6 +184,9 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                 startRecognitionButton.setEnabled(false);
                 stopRecognitionButton.setEnabled(true);
                 cancelButton.setEnabled(true);
+
+                Global.ambiguityList.clear();
+                ambiguityListAdapter.notifyDataSetChanged();
 
                 _recorder = new MicrophoneRecorderSource(AudioType.PCM_16k);
                 _speexPipe = new SpeexEncoderPipe();
@@ -211,59 +236,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                             }
 //                            Log.d("sss", readableResult);
 //                            sendJsonToEmail(readableResult);
-                            String feedback = "";
-                            String phoneNumber = "";
-                            jsonParser = new JsonParser(result.getDictionary().toJSON());
-                            feedback = jsonParser.getTtsText();
-                            ttsService.performTTS(getApplicationContext(), feedback);
-                            showResults(resultEditText, feedback);
+                            onGetDataResult(result.getDictionary().toJSON());
 
-                            //calling domain process
-                            if(jsonParser.getDomain().equals("calling")){
-                                CallingDomainProc callingDomain
-                                        = new CallingDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
-                                callingDomain.process();
-                                phoneNumber = callingDomain.phoneNumber;
-                                Log.d("sss", phoneNumber);
-
-                                //if there is ambiguty
-                                if(jsonParser.getDialogPhase().equals("disambiguation")){
-                                    ambiguityListAdapter.notifyDataSetChanged();
-                                }
-
-                                //if it is ready to call
-                                if (jsonParser.getIntent().equals("call") && !phoneNumber.equals("") && ActivityCompat.checkSelfPermission(getApplicationContext(),
-                                        Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-                                    Intent callIntent = new Intent(Intent.ACTION_CALL);
-                                    callIntent.setData(Uri.parse("tel:" + phoneNumber));
-                                    startActivity(callIntent);
-                                }
-                            }
-
-                            //message domain process
-                            if(jsonParser.getDomain().equals("messaging")){
-                                MessageDomainProc messageDomainProc
-                                        = new MessageDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
-                                messageDomainProc.process();
-                                phoneNumber = messageDomainProc.getPhoneNumber();
-                                Log.d("sss", phoneNumber);
-                                Log.d("sss", messageDomainProc.getMessageContent());
-
-                                //if there is ambiguity
-                                if(jsonParser.getDialogPhase().equals("disambiguation")){
-//                                    sendJsonToEmail(readableResult);
-                                    ambiguityListAdapter.notifyDataSetChanged();
-                                }
-
-                                //if it is ready to send the message
-                                if (jsonParser.getIntent().equals("send") &&
-                                        !phoneNumber.equals("") &&
-                                        ActivityCompat.checkSelfPermission(getApplicationContext(),
-                                        Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
-                                    SmsManager smsManager = SmsManager.getDefault();
-                                    smsManager.sendTextMessage(phoneNumber, null, messageDomainProc.getMessageContent(), null, null);
-                                }
-                            }
                         }
                     }
 
@@ -470,4 +444,321 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return transcriptionDict.getString("text").value;
     }
 
+
+    /**
+     * Start adk subdialog.
+     *
+     * @param mAdkSubdialogListener the listener
+     */
+    public void startAdkSubdialog(Transaction.Listener mAdkSubdialogListener) {
+//        initCloudServices();
+        try {
+            Log.e(TAG, "Inside startAdkSubdialog()");
+            Dictionary settings = this.createCommandSettings(DEFAULT_APPSERVER_COMMAND, "nma_dm_main", getLanguage());
+            Dictionary root = new Dictionary();
+            Dictionary appserver_data = new Dictionary();
+
+            appserver_data.put("hour_format", "LOCALE");
+            appserver_data.put("timezone", getTimeZone());
+            appserver_data.put("time", getCurrentTime());
+            //appserver_data.put("return_nlu_results", 1);
+            appserver_data.put("action_mode", "default");
+            appserver_data.put("application", getNluProfile());
+            //appserver_data.put("dialog_seq_id", 2);
+
+            //Ji's code
+            String choose = "SLOTS:GENERIC_ORDER:"+Global.ambiguityListChosenID.toString();
+            appserver_data.put("message", choose);
+
+            root.put("appserver_data", appserver_data);
+            root.put("nlsml_results", 1);
+            root.put("dg_result_as_json", 1);
+            root.put("use_dg_domain", 0);
+            root.put("type", "conversation");
+
+            root.put("start", 0);
+            root.put("end", 0);
+            root.put("text", "");
+
+//            Log.d(TAG, "ADK Subdialog Request Data: " + root.toString());
+            DictionaryParam RequestInfo = new DictionaryParam("REQUEST_INFO", root);
+
+            Log.d(TAG, "Creating Start ADK Subdialog Transaction...");
+
+            Transaction dut;
+
+            if( mAdkSubdialogListener != null )
+                dut = new Transaction(DEFAULT_APPSERVER_COMMAND, settings, mAdkSubdialogListener, 3000, true);
+            else
+                dut = new Transaction(DEFAULT_APPSERVER_COMMAND, settings, new Transaction.Listener() {
+
+                    @Override
+                    public void onTransactionStarted(Transaction arg0) {
+                        Log.d(TAG, "Transaction Started...");
+                        onGetDataStarted(arg0);
+                    }
+
+                    @Override
+                    public void onTransactionProcessingStarted(Transaction transaction) {
+                    }
+
+                    @Override
+                    public void onTransactionResult(Transaction arg0, TransactionResult arg1,
+                                                    boolean arg2) {
+                        Log.d(TAG, "Transaction Completed...");
+                        JSONObject results = arg1.getContents().toJSON();
+                        onGetDataResult(results);
+                    }
+
+                    @Override
+                    public void onTransactionError(Transaction arg0, TransactionError arg1) {
+                        Log.d(TAG, "Transaction Error...");
+                        onGetDataError(arg0, arg1.toJSON());
+                    }
+
+                    @Override
+                    public void onTransactionIdGenerated(String s) {
+                    }
+                }, 3000, true);
+
+//            Log.d(TAG, "settings: " + settings.toString());
+//            Log.d(TAG, "requestInfo: " + RequestInfo.toString());
+
+//            this.mCloudServices.addTransaction(dut, 1);
+            _cloudServices.addTransaction(dut, 1);
+            dut.addParam(RequestInfo);
+            dut.finish();
+
+        } catch( Exception e) {
+            //Log.e(TAG, e.getMessage());
+            Log.e(TAG, "Exception thrown in RecognizerCloudActivity.startAdkSubdialog()");
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Creates the command settings.
+     *
+     * @param commandName the command name
+     * @param type the dictation type
+     * @param language the dictation language
+     * @return the command settings dictionary
+     */
+    private Dictionary createCommandSettings(String commandName, String type, String language) {
+        Data.Dictionary settings = new Data.Dictionary();
+
+        settings.put("command", commandName);
+        settings.put("nmaid", AppInfo.AppId);
+        settings.put("dictation_language", language);
+        settings.put("carrier", "ATT");
+//        settings.put("dictation_type", type);
+        settings.put("application_name",  this.getString(R.string.app_name));
+        settings.put("application_session_id", AppInfo.applicationSessionID);
+        settings.put("application_state_id", "45");
+//        settings.put("location", getLastKnownLocation());
+        settings.put("utterance_number", "5");
+        settings.put("audio_source", "SpeakerAndMicrophone");
+
+        //Ji Li's code
+        settings.put("uid", AppInfo.IMEInumber);
+        settings.put("nlps_use_adk", 1);
+        settings.put("application", "TCL");
+        settings.put("dictation_type", "gens_dm_main");
+
+        return settings;
+    }
+
+
+    private String getNluProfile() {
+        if( mNluProfile != null )
+            return mNluProfile;
+
+        return DEFAULT_NLU_PROFILE;
+    }
+
+
+    private void onRecognitionResult(JSONObject results) {
+        /* Do nothing */
+    }
+
+    /**
+     * On recognition error.
+     *
+     * @param error the error
+     */
+    private void onRecognitionError(JSONObject error) {
+        /* Do nothing */
+    }
+
+    /**
+     * On get data started.
+     *
+     * @param t the t
+     */
+    private void onGetDataStarted(Transaction t) {
+
+    }
+
+    /**
+     * On get data result.
+     *
+     * @param result the result
+     */
+    private void onGetDataResult(JSONObject result) {
+//        try {
+//            sendJsonToEmail(result.toString(4));
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
+        String feedback = "";
+        String phoneNumber = "";
+        jsonParser = new JsonParser(result);
+        feedback = jsonParser.getTtsText();
+        ttsService.performTTS(getApplicationContext(), feedback);
+        showResults(resultEditText, feedback);
+
+        //calling domain process
+        if(jsonParser.getDomain().equals("calling")){
+            CallingDomainProc callingDomain
+                    = new CallingDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
+            callingDomain.process();
+            phoneNumber = callingDomain.phoneNumber;
+            Log.d("sss", phoneNumber);
+
+            //if there is ambiguty
+            if(jsonParser.getDialogPhase().equals("disambiguation")){
+                ambiguityListAdapter.notifyDataSetChanged();
+            }
+
+            //if it is ready to call
+            if (jsonParser.getIntent().equals("call") && !phoneNumber.equals("") && ActivityCompat.checkSelfPermission(getApplicationContext(),
+                    Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+                Intent callIntent = new Intent(Intent.ACTION_CALL);
+                callIntent.setData(Uri.parse("tel:" + phoneNumber));
+                startActivity(callIntent);
+            }
+        }
+
+        //message domain process
+        if(jsonParser.getDomain().equals("messaging")) {
+            MessageDomainProc messageDomainProc
+                    = new MessageDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
+            messageDomainProc.process();
+            phoneNumber = messageDomainProc.getPhoneNumber();
+            Log.d("sss", phoneNumber);
+            Log.d("sss", messageDomainProc.getMessageContent());
+
+            //if there is ambiguity
+            if (jsonParser.getDialogPhase().equals("disambiguation")) {
+                ambiguityListAdapter.notifyDataSetChanged();
+            }
+
+            if (jsonParser.getIntent().equals("display")) {
+                Global.ambiguityList.clear();
+                Log.d("sss", "message: "+messageDomainProc.getMessageContent());
+                Global.ambiguityList.add(messageDomainProc.getMessageContent());
+                ambiguityListAdapter.notifyDataSetChanged();
+            }
+
+            //if it is ready to send the message
+            if (jsonParser.getIntent().equals("send") &&
+                    !phoneNumber.equals("") &&
+                    ActivityCompat.checkSelfPermission(getApplicationContext(),
+                            Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
+                SmsManager smsManager = SmsManager.getDefault();
+                smsManager.sendTextMessage(phoneNumber, null, messageDomainProc.getMessageContent(), null, null);
+            }
+        }
+    }
+
+    /**
+     * On get data error.
+     *
+     * @param t the t
+     * @param error the error
+     */
+    private void onGetDataError(Transaction t, JSONObject error) {
+
+    }
+
+    /**
+     * Converts a Geo-Location object to formatted string.
+     *
+     * @param location the geo-location object
+     * @return the formatted string
+     */
+    private String locationToString(Location location) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append("<");
+            sb.append(location.getLatitude());
+            sb.append(", ");
+            sb.append(location.getLongitude());
+            sb.append(">");
+
+            if (location.hasAccuracy()) {
+                sb.append(" +/- ");
+                sb.append(location.getAccuracy());
+                sb.append("m");
+            }
+
+            return sb.toString();
+        }
+        catch (Exception e) {
+            Log.d(TAG, "Failed to create location string: " + e.getLocalizedMessage());
+            return "";
+        }
+    }
+    /**
+     * Gets the device's time zone.
+     *
+     * @return the time zone
+     */
+    protected String getTimeZone() {
+        TimeZone tz = TimeZone.getDefault();
+
+        Log.d(TAG, "Device timezone is: " + tz.getID());
+        return tz.getID();	//tz.getDisplayName();
+    }
+
+    /**
+     * Gets the current time.
+     *
+     * @return the current time
+     */
+    protected String getCurrentTime() {
+        String format = "yyyy-MM-dd'T'HH:mm:ssZ";
+
+        TimeZone tz = TimeZone.getDefault();	//.getTimeZone("UTC");
+        Log.d(TAG, "Device timezone is: " + tz.getID());	//tz.getDisplayName());
+
+        DateFormat dateFormat = new SimpleDateFormat(format, Locale.getDefault());
+        dateFormat.setTimeZone(tz);
+
+        Date date = new Date();
+        Log.d(TAG, "Device timestamp is: " + dateFormat.format(date));
+
+        return dateFormat.format(date);
+    }
+
+    /**
+     * Gets the dictation language.
+     *
+     * @return the dictation language
+     */
+    protected String getLanguage() {
+        if( mLanguage != null )
+            return mLanguage;
+
+        return DEFAULT_LANGUAGE;
+    }
+
+    /**
+     * Sets the dictation language.
+     *
+     * @param language the new dictation language
+     */
+    void setLanguage(String language) {
+        mLanguage = language;
+    }
 }

@@ -83,6 +83,7 @@ public class MainActivity extends Activity {
     }
 
     private void init(){
+        //init the hashtable of the phoneId to phoneNumber
         getAllContactList();
         try{
             getAllContactJsonArrayAndObject();

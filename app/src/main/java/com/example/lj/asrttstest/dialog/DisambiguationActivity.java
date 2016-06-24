@@ -420,18 +420,6 @@ public class DisambiguationActivity extends BaseCloudActivity {
      * @param result the result
      */
     private void onGetDataResult(Transaction t, JSONObject result) {
-//        try {
-//            Log.d("sss", result.toString(4));
-//            Intent data=new Intent(Intent.ACTION_SENDTO);
-//            data.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//            data.setData(Uri.parse("mailto:rpbloom@gmail.com"));
-//            data.putExtra(Intent.EXTRA_SUBJECT, "这是标题");
-//            data.putExtra(Intent.EXTRA_TEXT, result.toString(4));
-//            mContext.startActivity(data);
-//        }catch (JSONException e){
-//            e.printStackTrace();
-//        }
-
         String feedback = "";
         String phoneNumber = "";
         JsonParser jsonParser = new JsonParser(result);
@@ -445,16 +433,6 @@ public class DisambiguationActivity extends BaseCloudActivity {
             phoneNumber = callingDomain.phoneNumber;
             Log.d("sss", phoneNumber);
             if(jsonParser.getDialogPhase().equals("disambiguation")){
-//                Log.d("sss", callingDomain.ambiguityList.toString());
-//                JSONObject data = new JSONObject();
-//                try {
-//                    data.putOpt("message", "SLOTS:GENERIC_ORDER:1");
-//                    DisambiguationActivity disambiguation = new DisambiguationActivity(mContext,callingDomain.ambiguityList);
-////                                        disambiguation.doDataExchange(data, null);
-//                    disambiguation.startAdkSubdialog(data, null);
-//                } catch (JSONException e) {
-//                    e.printStackTrace();
-//                }
                 Global.ambiguityListChosenID = -1;
                 Intent localIntent = new Intent(mContext, AmbiguityActivity.class);
                 localIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
