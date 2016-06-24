@@ -88,20 +88,9 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private Data.Sequence _grammarList, _checksumList;
     private WorkerThread _workerThread;
     private JsonParser jsonParser;
-    private TTSService _ttsService;
+    private TTSService ttsService;
 
     private EditText resultEditText;
-
-    /** The default NCS NLU App Server command. Default is DRAGON_NLU_APPSERVER_CMD. */
-    private static final String DEFAULT_APPSERVER_COMMAND = "DRAGON_NLU_APPSERVER_CMD";
-
-    /** The default nlu profile name. Default value is REFERENCE_NCS. */
-    private static final String DEFAULT_NLU_PROFILE = "REFERENCE_NCS";
-
-    /** The default language to use. Set to eng-USA. Override available languages in the configuration file. */
-    private static final String DEFAULT_LANGUAGE = "eng-USA";
-
-    private Integer ambiguityChosenID = new Integer(0);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,7 +108,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         resultModeSpinner.setEnabled(false);
 
         //my code here for jason parser initialization
-        _ttsService = new TTSService(getApplicationContext());
+        ttsService = new TTSService(getApplicationContext());
         AppInfo.applicationSessionID = String.valueOf(UUID.randomUUID());
 
         getAllContactList();
@@ -211,18 +200,24 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                             String phoneNumber = "";
                             jsonParser = new JsonParser(result.getDictionary().toJSON());
                             feedback = jsonParser.getTtsText();
-                            _ttsService.performTTS(getApplicationContext(), feedback);
+                            ttsService.performTTS(getApplicationContext(), feedback);
                             showResults(resultEditText, feedback);
+
+                            //calling domain process
                             if(jsonParser.getDomain().equals("calling")){
                                 CallingDomainProc callingDomain
                                         = new CallingDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
                                 callingDomain.process();
                                 phoneNumber = callingDomain.phoneNumber;
                                 Log.d("sss", phoneNumber);
+
+                                //if there is ambiguty
                                 if(jsonParser.getDialogPhase().equals("disambiguation")){
                                     Intent localIntent = new Intent(NLUCloudASRActivity.this, AmbiguityActivity.class);
                                     NLUCloudASRActivity.this.startActivity(localIntent);
                                 }
+
+                                //if it is ready to call
                                 if (jsonParser.getIntent().equals("call") && !phoneNumber.equals("") && ActivityCompat.checkSelfPermission(getApplicationContext(),
                                         Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
                                     Intent callIntent = new Intent(Intent.ACTION_CALL);
@@ -230,6 +225,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                                     startActivity(callIntent);
                                 }
                             }
+
+                            //message domain process
                             if(jsonParser.getDomain().equals("messaging")){
                                 MessageDomainProc messageDomainProc
                                         = new MessageDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
@@ -237,11 +234,15 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                                 phoneNumber = messageDomainProc.getPhoneNumber();
                                 Log.d("sss", phoneNumber);
                                 Log.d("sss", messageDomainProc.getMessageContent());
+
+                                //if there is ambiguity
                                 if(jsonParser.getDialogPhase().equals("disambiguation")){
 //                                    sendJsonToEmail(readableResult);
                                     Intent localIntent = new Intent(NLUCloudASRActivity.this, AmbiguityActivity.class);
                                     NLUCloudASRActivity.this.startActivity(localIntent);
                                 }
+
+                                //if it is ready to send the message
                                 if (jsonParser.getIntent().equals("send") &&
                                         !phoneNumber.equals("") &&
                                         ActivityCompat.checkSelfPermission(getApplicationContext(),
