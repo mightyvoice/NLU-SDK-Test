@@ -495,7 +495,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                     @Override
                     public void onTransactionStarted(Transaction arg0) {
                         Log.d(TAG, "Transaction Started...");
-                        onGetDataStarted(arg0);
                     }
 
                     @Override
@@ -519,6 +518,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                     @Override
                     public void onTransactionIdGenerated(String s) {
                     }
+
                 }, 3000, true);
 
 //            Log.d(TAG, "settings: " + settings.toString());
@@ -574,29 +574,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
             return mNluProfile;
 
         return DEFAULT_NLU_PROFILE;
-    }
-
-
-    private void onRecognitionResult(JSONObject results) {
-        /* Do nothing */
-    }
-
-    /**
-     * On recognition error.
-     *
-     * @param error the error
-     */
-    private void onRecognitionError(JSONObject error) {
-        /* Do nothing */
-    }
-
-    /**
-     * On get data started.
-     *
-     * @param t the t
-     */
-    private void onGetDataStarted(Transaction t) {
-
     }
 
     /**
