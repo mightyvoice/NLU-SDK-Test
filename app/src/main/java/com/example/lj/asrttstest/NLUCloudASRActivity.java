@@ -1,15 +1,12 @@
 package com.example.lj.asrttstest;
 
 import android.Manifest;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Handler;
-import android.provider.ContactsContract;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -20,21 +17,14 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
-import android.telephony.TelephonyManager;
 import android.widget.TextView;
 
-import com.example.lj.asrttstest.dialog.AmbiguityActivity;
 import com.example.lj.asrttstest.dialog.CallingDomainProc;
-import com.example.lj.asrttstest.dialog.DisambiguationActivity;
-import com.example.lj.asrttstest.dialog.IRdomain;
 import com.example.lj.asrttstest.dialog.JsonParser;
 import com.example.lj.asrttstest.dialog.MessageDomainProc;
-import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.AppInfo;
-import com.example.lj.asrttstest.info.ContactInfo;
 import com.example.lj.asrttstest.info.Global;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
 import com.nuance.dragon.toolkit.audio.AudioType;
@@ -55,12 +45,10 @@ import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognitionResult
 import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognizer;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.RecogSpec;
 import com.nuance.dragon.toolkit.data.Data;
-import com.nuance.dragon.toolkit.data.Data.Sequence;
 import com.nuance.dragon.toolkit.data.Data.Dictionary;
 import com.nuance.dragon.toolkit.util.Logger;
 import com.nuance.dragon.toolkit.util.WorkerThread;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -71,12 +59,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -317,33 +301,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         startActivity(data);
     }
 
-    private void readDragonData()
-    {
-        try {
-            Context dmaContext = createPackageContext("com.nuance.balerion", Context.CONTEXT_IGNORE_SECURITY | Context.CONTEXT_INCLUDE_CODE);
-            File grammarFile = new File(dmaContext.getExternalFilesDir(null), "grammars.ncs");
-            FileInputStream fis = new FileInputStream(grammarFile);
-            ObjectInputStream ois = new ObjectInputStream(fis);
-            int version = ois.readInt();
-            if (version == DMA_GRAMMAR_VERSION)
-            {
-                _uniqueId = ois.readUTF();
-                _grammarList = new Data.Sequence();
-                int grammarListLen = ois.readInt();
-                for (int grammarIdx = 0; grammarIdx < grammarListLen; grammarIdx++)
-                    _grammarList.add((Data.Dictionary)ois.readObject());
-                _checksumList = new Data.Sequence();
-                int checksumListLen = ois.readInt();
-                for (int checksumIdx = 0; checksumIdx < checksumListLen; checksumIdx++)
-                    _checksumList.add((Data.Dictionary)ois.readObject());
-            }
-            ois.close();
-            fis.close();
-        } catch (Exception e) {
-            Logger.error(this, "Error reading DMA data.", e);
-        }
-    }
-
     private void showResults(TextView textbox, String result)
     {
         Logger.debug(this, "" + result);
@@ -437,14 +394,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return retRecogSpec;
     }
 
-    private static String getTranscription(CloudRecognitionResult result)
-    {
-        Data.Dictionary appServerResults = result.getDictionary().getDictionary("appserver_results");
-        Data.Dictionary transcriptionDict = appServerResults.getDictionary("payload").getSequence("actions").getDictionary(0);
-        return transcriptionDict.getString("text").value;
-    }
-
-
     /**
      * Start adk subdialog.
      *
@@ -512,7 +461,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                     @Override
                     public void onTransactionError(Transaction arg0, TransactionError arg1) {
                         Log.d(TAG, "Transaction Error...");
-                        onGetDataError(arg0, arg1.toJSON());
+//                        onGetDataError(arg0, arg1.toJSON());
                     }
 
                     @Override
@@ -648,44 +597,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * On get data error.
-     *
-     * @param t the t
-     * @param error the error
-     */
-    private void onGetDataError(Transaction t, JSONObject error) {
-
-    }
-
-    /**
-     * Converts a Geo-Location object to formatted string.
-     *
-     * @param location the geo-location object
-     * @return the formatted string
-     */
-    private String locationToString(Location location) {
-        try {
-            StringBuilder sb = new StringBuilder();
-            sb.append("<");
-            sb.append(location.getLatitude());
-            sb.append(", ");
-            sb.append(location.getLongitude());
-            sb.append(">");
-
-            if (location.hasAccuracy()) {
-                sb.append(" +/- ");
-                sb.append(location.getAccuracy());
-                sb.append("m");
-            }
-
-            return sb.toString();
-        }
-        catch (Exception e) {
-            Log.d(TAG, "Failed to create location string: " + e.getLocalizedMessage());
-            return "";
-        }
-    }
     /**
      * Gets the device's time zone.
      *

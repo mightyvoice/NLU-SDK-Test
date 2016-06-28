@@ -12,6 +12,7 @@ import com.nuance.dragon.toolkit.data.Data;
 import 	android.content.ContentResolver;
 import android.util.Log;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -42,7 +43,7 @@ public class ContactsActivity extends AppCompatActivity {
         }
 
 
-        final EditText resultEditText = (EditText)findViewById(R.id.cloudResultEditText);
+        final TextView resultEditText = (TextView)findViewById(R.id.cloudResultEditText);
         try {
             resultEditText.setText(AllContactInfo.allContactJsonObject.toString(4));
         } catch (JSONException e) {
@@ -72,10 +73,12 @@ public class ContactsActivity extends AppCompatActivity {
                         cur.getColumnIndex(ContactsContract.Contacts._ID));
                 String name = cur.getString(cur.getColumnIndex(
                         ContactsContract.Contacts.DISPLAY_NAME));
-                String[] nameList = name.split(" ");
-                contact.setFirstName(nameList[0]);
-                contact.setLastName(nameList[1]);
-                contact.setMobilePhone("0");
+                String[] nameList = null;
+                if(name != null && !name.equals("")){
+                    nameList = name.split(" ");
+                    contact.setFirstName(nameList[0]);
+                    if(nameList.length > 1) contact.setLastName(nameList[1]);
+                }
                 if (Integer.parseInt(cur.getString(cur.getColumnIndex(
                         ContactsContract.Contacts.HAS_PHONE_NUMBER))) > 0) {
                     Cursor pCur = cr.query(
@@ -88,7 +91,6 @@ public class ContactsActivity extends AppCompatActivity {
                                 ContactsContract.CommonDataKinds.Phone.NUMBER));
                         String phoneType = pCur.getString(pCur.getColumnIndex(
                                 ContactsContract.CommonDataKinds.Phone.TYPE));
-                        contact.setMobilePhone(phoneNum);
                         phoneType = contact.phoneTypeTable.get(phoneType);
                         contact.phoneNumberTable.put(phoneType, phoneNum);
                     }

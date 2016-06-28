@@ -110,10 +110,12 @@ public class MainActivity extends Activity {
                         cur.getColumnIndex(ContactsContract.Contacts._ID));
                 String name = cur.getString(cur.getColumnIndex(
                         ContactsContract.Contacts.DISPLAY_NAME));
-                String[] nameList = name.split(" ");
-                contact.setFirstName(nameList[0]);
-                contact.setLastName(nameList[1]);
-                contact.setMobilePhone("0");
+                String[] nameList = null;
+                if(name != null && !name.equals("")){
+                    nameList = name.split(" ");
+                    contact.setFirstName(nameList[0]);
+                    if(nameList.length > 1) contact.setLastName(nameList[1]);
+                }
 
                 if (Integer.parseInt(cur.getString(cur.getColumnIndex(
                         ContactsContract.Contacts.HAS_PHONE_NUMBER))) > 0) {
@@ -127,7 +129,6 @@ public class MainActivity extends Activity {
                                 ContactsContract.CommonDataKinds.Phone.NUMBER));
                         String phoneType = pCur.getString(pCur.getColumnIndex(
                                 ContactsContract.CommonDataKinds.Phone.TYPE));
-                        contact.setMobilePhone(phoneNo);
                         phoneType = contact.phoneTypeTable.get(phoneType);
                         contact.phoneNumberTable.put(phoneType, phoneNo);
                     }

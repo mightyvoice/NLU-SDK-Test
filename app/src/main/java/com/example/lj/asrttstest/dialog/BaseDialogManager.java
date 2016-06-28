@@ -106,9 +106,6 @@ public class BaseDialogManager implements IDialogManager {
         mGetData = parseGetData();
         mNlpsVersion = parseNlpsVersion();
         mServerSpecifiedSettings = parseServerSpecifiedSettings();
-
-
-		/* The dialog result. */
         return new DialogResult(mTtsText, mSystemText, isFinalResponse(), continueDialog(), mDialogPhase);
     }
 

@@ -38,7 +38,6 @@
         <activity android:name=".upload.BaseCloudActivity" />
         <activity android:name=".upload.ContactsActivity" />
         <activity android:name=".dialog.DisambiguationActivity" />
-        <activity android:name=".dialog.AmbiguityActivity"></activity>
     </application>
 
 </manifest>
