@@ -69,43 +69,6 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
     }
 
     /**
-     * Clear grammars.
-     */
-    public void clearGrammars() {
-        this.mGrammars.clear();
-    }
-
-    /**
-     * Adds the grammar.
-     *
-     * @param g the grammar
-     */
-    public void addGrammar( Grammar g ) {
-        this.mGrammars.add(g);
-    }
-
-    /**
-     * Gets the dictation type.
-     *
-     * @return the dictation type
-     */
-    private String getDictationType() {
-        if( mDictationType != null )
-            return mDictationType;
-
-        return DEFAULT_DICTATION_TYPE;
-    }
-
-    /**
-     * Sets the dictation type.
-     *
-     * @param value the new dictation type
-     */
-    void setDictationType(String value) {
-        mDictationType = value;
-    }
-
-    /**
      * Instantiates a new data uploader cloud activity.
      *
      * @param c the application mContext
@@ -244,83 +207,6 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
 
     /**
      * Upload data.
-     *
-     * @param json the dictionary of configured grammars available for upload
-     * @param uploadListener the upload data transaction listener
-     * @param deleteListener the delete data transaction listener
-     * @return the next application state
-     */
-    public int uploadData(JSONObject json, Transaction.Listener uploadListener, Transaction.Listener deleteListener) {
-        JSONArray grammars;
-        boolean deleteAll = false;
-
-        try {
-            grammars = json.optJSONArray("grammars");
-            if( grammars == null || grammars.length() == 0 ) {
-                Log.i(TAG, "No grammars exist for the active credentials file.");
-                return 0;
-            }
-            Log.i(TAG, grammars.length() + " grammars exist for the active credentials file.");
-            deleteAllData(deleteListener);
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage(), e);
-            return 0;
-        }
-
-        Dictionary settings = this.createCommandSettings(DEFAULT_DATAUPLOAD_COMMAND, getLanguage());
-
-        for(int i = 0; i < grammars.length(); i++) {
-            JSONObject grammar = grammars.optJSONObject(i);
-            if ( grammar != null && grammar.length() == 1 ) {
-                Iterator<?> keys = grammar.keys();
-
-                while( keys.hasNext() ) {
-                    String key = (String)keys.next();
-                    JSONObject grammarItem = grammar.optJSONObject(key);
-                    String id = grammarItem.optString("id");
-                    String type = grammarItem.optString("type");
-                    String category = grammarItem.optString("category");
-                    JSONObject list = grammarItem.optJSONObject("list");
-
-                    if( id == null || id.length() == 0 ) {
-                        Log.e(TAG, "Invalid {id} for grammar {"+ key +"}. Id must exist and not be empty.");
-                        continue;
-                    }
-                    if( type == null || type.length() == 0 ) {
-                        Log.e(TAG, "Invalid {type} for grammar {"+ key +"}. Type must exist and not be empty.");
-                        continue;
-                    }
-                    if( type.equalsIgnoreCase("predefined_static_grammars") ) {
-                        // No data upload associated with these type of grammars...
-                        mGrammars.add(new Grammar(id, type, null, null) );
-                        break;
-                    }
-
-                    if( list == null || list.length() == 0 ) {
-                        Log.e(TAG, "Invalid {content list} for grammar {"+ key +"}. Content list must exist and not be empty.");
-                        continue;
-                    }
-
-                    Dictionary d = this.createDataUploadRequestBegin(id, type, category, list, deleteAll);
-                    if( d == null ) {
-                        Log.e(TAG, "Could not create the data block to upload to server. Please check logs for more details.");
-                        continue;
-                    }
-                    DictionaryParam DataBlock = new DictionaryParam("DATA_BLOCK", d);
-                    DictionaryParam UploadDone = new DictionaryParam("UPLOAD_DONE", this.createDataUploadRequestDone(id, type, category));
-
-                    uploadData(settings, id, DataBlock, UploadDone, uploadListener);
-                    deleteAll = false;
-                }
-            }
-        }
-
-        return 0;
-    }
-
-
-    /**
-     * Upload data.
      * Ji Li's code for upload
      * Just call like this: TclUploadData(AllContactInfo.allContactInfoObject, null, null)
      * @param contactList the contact info in a json object: AllContactInfo.allContactInfoObject
@@ -347,7 +233,6 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
         DictionaryParam UploadDone = new DictionaryParam("UPLOAD_DONE", this.createDataUploadRequestDone(id, type, category));
 
         uploadData(settings, id, DataBlock, UploadDone, uploadListener);
-        deleteAll = false;
 
     }
 

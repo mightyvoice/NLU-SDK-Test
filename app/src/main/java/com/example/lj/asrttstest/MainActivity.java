@@ -35,7 +35,6 @@ public class MainActivity extends Activity {
 
         init();
 
-
         final Button cloudRecognizerButton = (Button) findViewById(R.id.cloudRecognizerButton);
         cloudRecognizerButton.setOnClickListener(new View.OnClickListener()
         {
@@ -90,6 +89,8 @@ public class MainActivity extends Activity {
         }catch (JSONException e){
             e.printStackTrace();
         }
+
+        //get imei number for uid
         TelephonyManager telephonyManager = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
         AppInfo.IMEInumber = telephonyManager.getDeviceId();
     }

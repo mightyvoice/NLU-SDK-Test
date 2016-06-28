@@ -163,7 +163,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         _workerThread.getHandler().post(new Runnable() {
             @Override
             public void run() {
-                readDragonData();
+//                readDragonData();
                 uiHandler.post(new Runnable() {
                     @Override
                     public void run() {
