@@ -54,8 +54,6 @@ public class AppInfo {
     public static String IMEInumber;
     public static String applicationSessionID;
 
-    public static String nooo;
-
     private static byte[] toByteArray(String appKey)
     {
         String trimmedAppKey = appKey.trim();
