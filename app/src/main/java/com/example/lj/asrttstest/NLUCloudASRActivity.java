@@ -5,14 +5,17 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Handler;
+import android.os.Vibrator;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telephony.SmsManager;
 import android.text.format.Time;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -27,10 +30,19 @@ import com.example.lj.asrttstest.dialog.MessageDomainProc;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.info.Global;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
+import com.nuance.dragon.toolkit.audio.AudioEnergyListener;
 import com.nuance.dragon.toolkit.audio.AudioType;
 import com.nuance.dragon.toolkit.audio.SpeechDetectionListener;
+import com.nuance.dragon.toolkit.audio.pipes.AudioEnergyCalculatorPipe;
+import com.nuance.dragon.toolkit.audio.pipes.BufferingDuplicatorPipe;
+import com.nuance.dragon.toolkit.audio.pipes.DuplicatorPipe;
 import com.nuance.dragon.toolkit.audio.pipes.EndPointerPipe;
+import com.nuance.dragon.toolkit.audio.pipes.NoiseSuppressionPipe;
+import com.nuance.dragon.toolkit.audio.pipes.NormalizerPipe;
+import com.nuance.dragon.toolkit.audio.pipes.OpusEncoderPipe;
+import com.nuance.dragon.toolkit.audio.pipes.PrecisionClearBufferingPipe;
 import com.nuance.dragon.toolkit.audio.pipes.SpeexEncoderPipe;
+import com.nuance.dragon.toolkit.audio.pipes.TimeoutPipe;
 import com.nuance.dragon.toolkit.audio.sources.MicrophoneRecorderSource;
 import com.nuance.dragon.toolkit.audio.sources.RecorderSource;
 import com.nuance.dragon.toolkit.cloudservices.CloudConfig;
@@ -44,11 +56,22 @@ import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognitionError;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognitionResult;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognizer;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.RecogSpec;
-import com.nuance.dragon.toolkit.data.Data;
-import com.nuance.dragon.toolkit.data.Data.Dictionary;
+import com.nuance.dragon.toolkit.elvis.ElvisConfig;
+import com.nuance.dragon.toolkit.elvis.ElvisRecognizer;
+import com.nuance.dragon.toolkit.elvis.EndpointingParam;
+
+
+/////differnt SDK different path
 import com.nuance.dragon.toolkit.util.Logger;
 import com.nuance.dragon.toolkit.util.WorkerThread;
+//import com.nuance.dragon.toolkit.oem.api.Logger;
+//import com.nuance.dragon.toolkit.oem.api.WorkerThread;
+import com.nuance.dragon.toolkit.data.Data;
+import com.nuance.dragon.toolkit.data.Data.Dictionary;
+//import com.nuance.dragon.toolkit.core.data.Data;
+//import com.nuance.dragon.toolkit.core.data.Data.Dictionary;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -59,6 +82,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -74,10 +98,11 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private RecorderSource<AudioChunk> _recorder;
     private SpeexEncoderPipe _speexPipe;
     private EndPointerPipe _endpointerPipe;
-
     private String _uniqueId;
     private Data.Sequence _grammarList, _checksumList;
     private WorkerThread _workerThread;
+
+    //Ji Li's parameters
     private JsonParser jsonParser;
     private TTSService ttsService;
 
@@ -85,6 +110,10 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 
     private ListView ambiguityListView;
     private ArrayAdapter<String> ambiguityListAdapter;
+
+    //for mix NLU
+    private CloudServices mMixCloudServices;
+    private CloudRecognizer mMixCloudRecognizer;
 
     /** The default language to use. Set to eng-USA. Override available languages in the configuration file. */
     private static final String DEFAULT_LANGUAGE = "eng-USA";
@@ -98,6 +127,10 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     /** The default nlu profile name. Default value is REFERENCE_NCS. */
     private static final String DEFAULT_NLU_PROFILE = "REFERENCE_NCS";
 
+    /** The default dictation type. Default value is nma_dm_main. */
+    private static final String DEFAULT_DICTATION_TYPE = "nma_dm_main";
+
+    private static final String MIX_CONTEXT = "M2807_A1443";
     /** The nlu profile. */
     private String mNluProfile = null;
 
@@ -119,6 +152,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         //my code here for jason parser initialization
         ttsService = new TTSService(getApplicationContext());
         AppInfo.applicationSessionID = String.valueOf(UUID.randomUUID());
+        AppInfo.mixApplicationSessionID = String.valueOf(UUID.randomUUID());
 
         //only array works, arrayList does not work here
         Global.ambiguityList = new ArrayList<>();
@@ -157,6 +191,9 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                                         _uniqueId, AudioType.SPEEX_WB, AudioType.SPEEX_WB));
                         _cloudRecognizer = new CloudRecognizer(_cloudServices);
                         startRecognitionButton.setEnabled(true);
+
+                        initMixCloudServices();
+                        initMixCloudRecognition();
                     }
                 });
             }
@@ -194,15 +231,64 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                 _speexPipe.connectAudioSource(_recorder);
                 _endpointerPipe.connectAudioSource(_speexPipe);
 
-                _cloudRecognizer.startRecognition(createCustomSpec(), _endpointerPipe, new CloudRecognizer.Listener() {
-                    private int resultCount = 0;
+//                _cloudRecognizer.startRecognition(createCustomSpec(), _endpointerPipe, new CloudRecognizer.Listener() {
+//                    private int resultCount = 0;
+//
+//                    @Override
+//                    public void onResult(CloudRecognitionResult result) {
+////                        Logger.debug(this, "NLU Cloud Recognition succeeded!");
+////                        stopRecording();
+//                        resultCount++;
+////                        startRecognitionButton.setEnabled(true);
+////                        stopRecognitionButton.setEnabled(false);
+////                        cancelButton.setEnabled(false);
+//
+//                        if (resultCount == 1) {
+//                            ///////// 1st result is the transcription
+//
+//                        } else {
+//                            ///////// 2nd result is the ADK/NLU action
+//                            String readableResult = "Error";
+//                            try {
+//                                readableResult = result.getDictionary().toJSON().toString(4);
+//                            } catch (JSONException e) {
+//                                e.printStackTrace();
+//                            }
+////                            Log.d("sss", readableResult);
+////                            sendJsonToEmail(readableResult);
+//                            onGetDataResult(result.getDictionary().toJSON());
+//
+//                        }
+//                    }
+//
+//                    @Override
+//                    public void onError(CloudRecognitionError error)
+//                    {
+//                        Logger.debug(this, "NLU Cloud Recognition failed!");
+//                        stopRecording();
+//
+//                        startRecognitionButton.setEnabled(true);
+//                        stopRecognitionButton.setEnabled(false);
+//                        cancelButton.setEnabled(false);
+//
+//                        resultEditText.setText("ERROR");
+//                    }
+//
+//                    @Override
+//                    public void onTransactionIdGenerated(String transactionId)
+//                    {
+//                    }
+//                });
 
+                mMixCloudRecognizer.startRecognition(createMixRecogSpec(DEFAULT_DICTATION_TYPE,
+                        getLanguage(), MIX_CONTEXT, null),
+                        _endpointerPipe, new CloudRecognizer.Listener() {
+                    private int resultCount = 0;
                     @Override
                     public void onResult(CloudRecognitionResult result) {
-//                        Logger.debug(this, "NLU Cloud Recognition succeeded!");
+                        Log.d("sss", "mix NLU Cloud Recognition succeeded!");
                         stopRecording();
                         resultCount++;
-
                         startRecognitionButton.setEnabled(true);
                         stopRecognitionButton.setEnabled(false);
                         cancelButton.setEnabled(false);
@@ -218,10 +304,9 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                             } catch (JSONException e) {
                                 e.printStackTrace();
                             }
-//                            Log.d("sss", readableResult);
-//                            sendJsonToEmail(readableResult);
-                            onGetDataResult(result.getDictionary().toJSON());
-
+                            Log.d("sss", readableResult);
+                            sendJsonToEmail(readableResult);
+//                            onGetDataResult(result.getDictionary().toJSON());
                         }
                     }
 
@@ -229,6 +314,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                     public void onError(CloudRecognitionError error)
                     {
                         Logger.debug(this, "NLU Cloud Recognition failed!");
+                        Log.d("sss", error.toString());
                         stopRecording();
 
                         startRecognitionButton.setEnabled(true);
@@ -239,9 +325,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onTransactionIdGenerated(String transactionId)
-                    {
-                        // TODO Auto-generated method stub
+                    public void onTransactionIdGenerated(String transactionId) {
                     }
                 });
             }
@@ -526,7 +610,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     }
 
     /**
-     * On get data result.
+     * Process the response json according to its domain
      *
      * @param result the result
      */
@@ -597,11 +681,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Gets the device's time zone.
-     *
-     * @return the time zone
-     */
     protected String getTimeZone() {
         TimeZone tz = TimeZone.getDefault();
 
@@ -609,11 +688,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return tz.getID();	//tz.getDisplayName();
     }
 
-    /**
-     * Gets the current time.
-     *
-     * @return the current time
-     */
     protected String getCurrentTime() {
         String format = "yyyy-MM-dd'T'HH:mm:ssZ";
 
@@ -629,11 +703,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return dateFormat.format(date);
     }
 
-    /**
-     * Gets the dictation language.
-     *
-     * @return the dictation language
-     */
     protected String getLanguage() {
         if( mLanguage != null )
             return mLanguage;
@@ -641,12 +710,158 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return DEFAULT_LANGUAGE;
     }
 
-    /**
-     * Sets the dictation language.
-     *
-     * @param language the new dictation language
-     */
     void setLanguage(String language) {
         mLanguage = language;
     }
+
+
+    /**
+     * Release cloud recognition resources.
+     */
+    void releaseCloudServices() {
+        if (mMixCloudServices != null) {
+            mMixCloudServices.release();
+            mMixCloudServices = null;
+        }
+    }
+
+    /**
+     * Initialize the cloud services resources.
+     *
+     * @return true, if successful
+     */
+    boolean initMixCloudServices() {
+        releaseCloudServices();
+        CloudConfig mixConfig = null;
+        mixConfig = new CloudConfig(
+                    AppInfo.mixHost,
+                    AppInfo.mixPort,
+                    AppInfo.mixAppId,
+                    AppInfo.mixAppKey,
+                    AudioType.SPEEX_WB,
+                    AudioType.SPEEX_WB);
+//        mixConfig = new CloudConfig.Builder(
+//                    AppInfo.mixHost,
+//                    AppInfo.mixPort,
+//                    AppInfo.mixAppId,
+//                    AppInfo.mixAppKey,
+//                    AudioType.SPEEX_WB,
+//                    AudioType.SPEEX_WB).build();
+//            NMTContext _context = LayoutInflater.Factory2.createNMTContextAndroid(mContext);
+        if( mixConfig != null ) {
+            Log.d(TAG, "Mix Config: " + mixConfig.toString());
+            mMixCloudServices = CloudServices.createCloudServices(this, mixConfig);
+            return true;
+        }
+        return false;
+    }
+
+    void releaseCloudRecognition() {
+        if (mMixCloudRecognizer!= null) {
+            mMixCloudRecognizer.cancel();
+            mMixCloudRecognizer = null;
+        }
+    }
+
+    boolean initMixCloudRecognition(){
+        releaseCloudRecognition();
+        if(mMixCloudServices != null) {
+            mMixCloudRecognizer = new CloudRecognizer(mMixCloudServices);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Creates the recog spec.
+     *
+     * @param type the dictation type (example: nma_dm_main)
+     * @param language the dictation language
+     * @param mixContext the mix context
+     * @param message the text to pass for NLU interpretation (null if using voice)
+     * @return the recognition spec
+     */
+    private RecogSpec createMixRecogSpec(String type, String language, String mixContext, String message) {
+
+        String command;
+        Data.Dictionary settings = new Data.Dictionary();
+        Data.Dictionary appDataDict = new Data.Dictionary();
+        Data.Dictionary requestInfo = new Data.Dictionary();
+
+        // Set core settings regardless of command type (ASR vs. NLU)
+        //settings.put("dictation_type", type);
+        settings.put("dictation_language", language);
+        settings.put("application_name",   this.getString(R.string.app_name));
+        settings.put("application_session_id", AppInfo.applicationSessionID);
+        settings.put("application_state_id", "45");
+        settings.put("location", getLastKnownLocation());
+        settings.put("utterance_number", "5");
+
+        settings.put("context_tag", mixContext);
+
+        // Determine if we're passing in audio or text for recognition
+        if (message == null) {
+            command = getMixAsrCommand(); // "...ASR_CMD";
+            settings.put("audio_source", "SpeakerAndMicrophone");
+        }
+        else {
+            command = getMixAppserverCommand(); // "...APP_CMD";
+            appDataDict.put("message", message);
+        }
+
+        RecogSpec recogSpec = new RecogSpec(command, settings, "AUDIO_INFO");
+
+        // Start creating REQUEST_INFO dictionary
+        requestInfo.put("start", 0);
+        requestInfo.put("end", 0);
+        requestInfo.put("text", "");
+
+        recogSpec.addParam(new DictionaryParam("REQUEST_INFO", requestInfo));
+
+        Log.d(TAG, "command: " + command);
+        Log.d(TAG, "settings: " + settings.toString());
+        Log.d(TAG, "requestInfo: " + requestInfo.toString());
+
+        return recogSpec;
+    }
+
+    private String getMixAsrCommand(){
+        return "NDSP_ASR_APP_CMD";
+    }
+
+    private String getMixAppserverCommand() {
+        return "NDSP_APP_CMD";
+    }
+
+    private String getLastKnownLocation() {
+        Log.d(TAG, "Retrieving last known location...");
+
+        LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        String provider = LocationManager.GPS_PROVIDER;
+        return locationToString(locationManager.getLastKnownLocation(provider));
+    }
+
+    private String locationToString(Location location) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append("<");
+            sb.append(location.getLatitude());
+            sb.append(", ");
+            sb.append(location.getLongitude());
+            sb.append(">");
+
+            if (location.hasAccuracy()) {
+                sb.append(" +/- ");
+                sb.append(location.getAccuracy());
+                sb.append("m");
+            }
+
+            return sb.toString();
+        }
+        catch (Exception e) {
+            Log.d(TAG, "Failed to create location string: " + e.getLocalizedMessage());
+            return "";
+        }
+    }
+
 }
