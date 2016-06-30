@@ -1,0 +1,2371 @@
+package com.example.lj.asrttstest.asr.text;
+
+/**
+ * Created by lj on 16/6/30.
+ */
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.TargetDataLine;
+import org.apache.commons.collections4.queue.CircularFifoQueue;
+
+import com.example.lj.asrttstest.asr.text.AudioChopper;
+import com.example.lj.asrttstest.asr.text.AudioChopperFactory;
+import com.example.lj.asrttstest.asr.text.Chunk;
+import com.example.lj.asrttstest.asr.text.Codec;
+import com.example.lj.asrttstest.asr.text.FileLoader;
+import com.example.lj.asrttstest.asr.text.LatencyMonitor;
+import com.example.lj.asrttstest.asr.text.ResponseParser;
+import com.example.lj.asrttstest.asr.text.SocketFactory;
+import com.example.lj.asrttstest.asr.text.LatencyMonitor.Marker;
+import com.example.lj.asrttstest.asr.text.LogData;
+import com.example.lj.asrttstest.asr.text.UserIDManager;
+
+public class HttpAsrClient implements IHttpAsrClient {
+
+    class AudioPacket {
+        byte audio[];
+        int size = 0;
+
+        float energyLevel = 0.0F;
+        float meanEnergyLevel = 0.0F;
+        double SNR = 0.0;
+        double rmsDiff = 0.0;
+        int frameTime = 0;
+
+        AudioFormat format = null;
+
+        public AudioPacket(AudioFormat format, byte buf[], int len) {
+            this.format = format;
+            audio = buf;
+            size = len;
+        }
+    }
+
+    // ********************* CONSTANTS *********************
+    /** The Constant MAX_8_BITS_SIGNED. Used in the algorithm to detect audio energy level. */
+    final static float MAX_8_BITS_SIGNED = Byte.MAX_VALUE;
+
+    /** The Constant MAX_8_BITS_UNSIGNED. Used in the algorithm to detect audio energy level. */
+    final static float MAX_8_BITS_UNSIGNED = 0xff;
+
+    /** The Constant MAX_16_BITS_SIGNED. Used in the algorithm to detect audio energy level. */
+    final static float MAX_16_BITS_SIGNED = Short.MAX_VALUE;
+
+    /** The Constant MAX_16_BITS_UNSIGNED. Used in the algorithm to detect audio energy level. */
+    final static float MAX_16_BITS_UNSIGNED = 0xffff;
+
+
+    // ********************* PRIVATE FIELDS *********************
+
+    /** The hostname of the server hosting the HTTP Interface. */
+    private String _host;
+
+    /** The TCP port of the server hosting the HTTP Interface. */
+    private int _port;
+
+    /** The application's nmaid. */
+    private String _appId;
+
+    /** The 128-byte string app key. */
+    private String _appKey;
+
+    /** All connectivity to production Nuance Cloud Services must be over TLS. However, if you are connecting to one of our
+     * Development environments you may need to connect over a non-secure transport */
+    private boolean _useTLS;
+
+    /** Nuance's Production data centers use trusted root certificates. Non-production run-times such as MTL-Dev do not. */
+    private boolean _requireTrustedRootCert = true;
+
+    /** A unique identifier that enables speaker-dependent acoustic and language model adaptation within Nuance Cloud Services */
+    private String _userID;
+
+    /** Streaming responses requires special server-side provisioning for your nmaid for this feature to take effect */
+    private boolean _streamingResults = true;
+
+    /** Flag to track whether or not to enable profanity filtering. Special server-side provisioning for your nmaid is required for this feature to take effect. */
+    protected boolean _profanityFilteringEnabled = false;
+
+    /** Flag to track whether or not to enable NLU */
+    protected boolean _nluEnabled = true;
+
+    /** Flag to track using text instead of audio for NLU interpretation */
+    private boolean _useTextNlu = false;
+
+    /** The text to pass in for NLU interpretation */
+    private String _message = null;
+
+    /** The built-in speaker data line that audio will be read from. */
+    private TargetDataLine line = null;
+
+    /** Flag to track if the user requested to stop a transaction. */
+    private boolean stopRequested = false;
+
+    // ********************* PROTECTED FIELDS *********************
+
+    /** Flag to track if batch mode is enabled. Default is false. */
+    protected boolean batchMode = false;
+
+    /** Flag to track whether or not to use start of speech detection */
+    protected boolean startOfSpeechDetectionEnabled = true;
+
+    /** Enable/Disable console output logging level. Default is false. Enable for debugging. */
+    protected boolean verbose = false;
+
+    /** Flag to track whether the client is actively capturing audio. */
+    protected volatile boolean listening = false;
+
+    /** The path to use for either saving audio (e.g. when capturing audio from the built-in speaker) or reading audio (e.g. when in batch mode). */
+    protected volatile String audioPath = null;
+
+    /** The socket connection to the HTTP service */
+    private volatile Socket s = null;
+
+    /** The socket reader */
+    private volatile BufferedReader br = null;
+
+    /** The HTTP socket output stream */
+    protected volatile OutputStream out = null;
+
+    /** The boundary string for chunked requests */
+    protected volatile String boundary = null;
+
+    /** Flag to track if query has failed */
+    protected volatile boolean queryFailed = false;
+
+    /** Flag to track if query was cancelled by user */
+    protected volatile boolean queryCancelled = false;
+
+    /** An instance of the LatencyMonitor class. */
+    protected LatencyMonitor transactionLatency = new LatencyMonitor();
+
+    /** An instance of the LogData class. */
+    protected LogData _logData = new LogData();
+
+    /** A synchronization object to wait for asynchronous web socket responses and task completion. */
+    private static Object waitLock = new Object();
+
+    /** The client-side transaction timeout. Default is 5000ms. */
+    protected int txnTimeout = 5000;
+
+    private static Object recorderWaitLock = new Object();
+    protected int recorderTimeout = 6000;
+
+    /** A synchronization object to wait for audio file streaming to complete. */
+    private CountDownLatch latch;
+
+    /**
+     * Request Data parameters are passed in with every NCS transaction request. Many of these parameters are used for
+     * tuning language and acoustic models. Others are for reporting/analytics. Therefore, it's important to ensure your
+     * production application is designed to set accurate and valid values using platform-level API's where applicable,
+     * and not just copy/paste these hard-coded ones.
+     *
+     */
+    protected class RequestData {
+        static final String APP_NAME = "Nuance Java Sample HTTP App";	// Your application's name
+        static final String APP_VERSION = "1.0";						// Your application's version number
+        static final String ORGANIZATION_ID = "NUANCE";					// The name of your company or organization
+
+        public String IN_CODEC = Codec.PCM_16_16K;						// Inbound (i.e. ASR) audio format. Please refer to documentation for complete list of supported values.
+        public String OUT_CODEC = Codec.PCM_16_16K;						// Outbound (i.e. TTS) audio format. Ditto...
+        static final String AUDIO_SOURCE = "SpeakerAndMicrophone";		// The audio source for a given transaction. Supported values are
+
+        static final String COMMAND_NAME_ASR = "NMDP_ASR_CMD";				// NCS Command Name. NMDP_ASR_CMD = Dictation. NMDP_TTS_CMD = Text-to-Speech. The complete set of available command names are provided upon request.
+        static final String COMMAND_NAME_NLU_ASR = "DRAGON_NLU_ASR_CMD";
+        static final String COMMAND_NAME_NLU_TEXT = "DRAGON_NLU_APPSERVER_CMD";
+        public String LANGUAGE = "eng-USA";								// Supported language codes can be found here: http://dragonmobile.nuancemobiledeveloper.com/public/index.php?task=supportedLanguages
+        public String DICTATION_TYPE = "nma_dm_main";					// This is also sometimes referred to as Topic and Language Model. Supported values are: nma_dm_main (for NLU personal assistant), Dictation, Websearch, and DTV. Please reach out to Sales or PS for available language support for a given dictation type.
+        static final String UI_LANGUAGE = "en";							// The keyboard language
+        public String APPLICATION = "full.6.2";							// The name of the application configured in the NLU profile. This is unique to each customer and requires custom server-side provisioning by Nuance. The default value provided here will likely not work.
+
+        static final String CARRIER = "unknown";						// Name of your device's carrier, if applicable.
+        static final String PHONE_NETWORK = "wifi";						// The device's network type
+        final String PHONE_OS = System.getProperty("os.name");			// The OS of the device the application is running on
+        final String DEVICE_MODEL = System.getProperty("os.arch");		// Name of your device's model
+        final String PHONE_SUBMODEL = System.getProperty("os.version");	// The device's submodel, if applicable
+
+        static final String LOCALE = "USA";								// Current locale of the device
+        static final String LOCATION = "";								// If available, geo-location coordinates (e.g. <+45.5086699, -73.5539925> +/- 99.00m)
+
+        static final String APPLICATION_STATE_ID = "0";					// Client-defined state id's, if applicable.
+
+        private String _applicationSessionID = null;					// Track multiple transaction requests within a single application session
+        private int _utteranceNumber = 1;								// Track the sequence of transaction requests within an application session
+
+        public void clearApplicationSessionID() {
+            _applicationSessionID = null;
+        }
+
+        public String initApplicationSessionID() {
+            _applicationSessionID = java.util.UUID.randomUUID().toString();
+
+            return _applicationSessionID;
+        }
+
+        public String getApplicationSessionID() {
+            return _applicationSessionID;
+        }
+
+        public void resetUtteranceNumber() {
+            _utteranceNumber = 1;
+        }
+
+        public int incrementUtteranceNumber() {
+            return _utteranceNumber++;
+        }
+
+        public int getUtteranceNumber() {
+            return _utteranceNumber;
+        }
+    }
+
+    /** An instance of the RequestData class. */
+    protected RequestData _requestData;
+
+
+
+    // ********************* CONSTRUCTORS *********************
+
+    /** Constructor */
+    public HttpAsrClient(String host, int port, String appId, String appKey, boolean useTLS) {
+
+        this(host, port, useTLS, appId, appKey, "Dictation", "eng-USA");
+
+    }
+
+    /** Constructor */
+    public HttpAsrClient(String host, int port, boolean useTLS, String appId,
+                         String appKey, String topic, String langCode) {
+
+        write("Host: " + host + ":" + port);
+        _host = host;
+        _port = port;
+        _appId = appId;
+        _appKey = appKey;
+        _useTLS = useTLS;
+
+        _requestData = new RequestData();
+        _requestData.LANGUAGE = langCode;
+        _requestData.DICTATION_TYPE = topic;
+
+    }
+
+
+
+    // ********************* GETTERS / SETTERS *********************
+
+    /**
+     * Enable batch mode.
+     */
+    public void enableBatchMode() {
+        batchMode = true;
+    }
+
+    /**
+     * Disable batch mode.
+     */
+    public void disableBatchMode() {
+        batchMode = false;
+    }
+
+    /**
+     * Check if batch mode is enabled.
+     *
+     * @return true, if enabled
+     */
+    public boolean batchModeEnabled() {
+        return batchMode;
+    }
+
+    /**
+     * Sets the saved audio path.
+     *
+     * @param val the new saved audio path
+     */
+    public void setSavedAudioPath(String val) {
+        audioPath = val;
+    }
+
+    /**
+     * Gets the saved audio path.
+     *
+     * @return the saved audio path
+     */
+    public String getSavedAudioPath() {
+        return audioPath;
+    }
+
+    /**
+     * Enable start of speech detection
+     */
+    public void enableStartOfSpeechDetection() {
+        startOfSpeechDetectionEnabled = true;
+    }
+
+    /**
+     * Disable start of speech detection
+     */
+    public void disableStartOfSpeechDetection() {
+        startOfSpeechDetectionEnabled = false;
+    }
+
+    /**
+     * Check if start of speech detection is enabled
+     */
+    public boolean isStartOfSpeechDetectionEnabled() {
+        return startOfSpeechDetectionEnabled;
+    }
+
+    /**
+     * Enable profanity filtering
+     */
+    public void enableProfanityFiltering() {
+        _profanityFilteringEnabled = true;
+    }
+
+    /**
+     * Disable profanity filtering
+     */
+    public void disableProfanityFiltering() {
+        _profanityFilteringEnabled = false;
+    }
+
+    /**
+     * Check if profanity filtering is enabled
+     */
+    public boolean isProfanityFilteringEnabled() {
+        return _profanityFilteringEnabled;
+    }
+
+    /**
+     * Set the name of the NLU profile application
+     */
+    public void setApplication( String application ) {
+        _requestData.APPLICATION = application;
+    }
+
+    /**
+     * Get the name of the NLU profile application
+     */
+    public String getApplication() {
+        return _requestData.APPLICATION;
+    }
+
+    /**
+     * Enable NLU
+     */
+    public void enableNLU() {
+        _nluEnabled = true;
+    }
+
+    /**
+     * Disable NLU
+     */
+    public void disableNLU() {
+        _nluEnabled = false;
+    }
+
+    /**
+     * Check if NLU is enabled
+     */
+    public boolean isNluEnabled() {
+        return _nluEnabled;
+    }
+
+    /**
+     * Enable NLU
+     */
+    public void enableTextNLU() {
+        _nluEnabled = true;
+        _useTextNlu = true;
+    }
+
+    /**
+     * Disable NLU
+     */
+    public void disableTextNLU() {
+        _nluEnabled = false;
+        _useTextNlu = false;
+    }
+
+    /**
+     * Check if NLU is enabled
+     */
+    public boolean isNluTextEnabled() {
+        return _useTextNlu;
+    }
+
+    /**
+     * Sets the txn timeout.
+     *
+     * @param val the new txn timeout
+     */
+    public void setTxnTimeout(int val) {
+        txnTimeout = val;
+    }
+
+    /**
+     * Gets the txn timeout.
+     *
+     * @return the txn timeout
+     */
+    public int getTxnTimeout() {
+        return txnTimeout;
+    }
+
+    public void enableTrustedRootCert() {
+        _requireTrustedRootCert = true;
+    }
+
+    public void disableTrustedRootCert() {
+        _requireTrustedRootCert = false;
+    }
+
+    /** Enable verbose */
+    public void enableVerbose() {
+        verbose = true;
+    }
+
+    /** Disable verbose */
+    public void disableVerbose() {
+        verbose = false;
+    }
+
+    /** Get verbose */
+    public boolean isVerbose() {
+        return verbose;
+    }
+
+    // ********************* CONSOLE EVENT HANDLERS *********************
+
+    /**
+     * Shutdown.
+     */
+    protected void shutdown() {
+        listening = false;
+        if( verbose ) write("shutting down...");
+        System.exit(0);
+    }
+
+    /**
+     * Toggle listening.
+     */
+    protected void toggleListening() {
+        if( listening )
+            stopListening();
+        else
+            startListening();
+    }
+
+    /**
+     * Start listening.
+     */
+    protected void startListening() {
+        transactionLatency.reset();
+        transactionLatency.setMarker(Marker.start);
+        connectToServer();
+        captureAudio();
+    }
+
+    /**
+     * Stop listening.
+     */
+    protected void stopListening() {
+        listening = false;
+        headersSent = false;
+
+        if (!stopRequested){
+            closeInputLine();
+        }
+    }
+
+    /**
+     * Close input line.
+     *
+     * If the built-in speaker data line is active and open, calling closeInputLine() will properly close the line.
+     */
+    private void closeInputLine() {
+        stopRequested = true;
+
+        if( line.isActive() || line.isRunning() )
+            line.stop();
+
+        if( line.isOpen() )
+            line.close();
+    }
+
+    /**
+     * Monitor console events.
+     *
+     * <br><br>
+     * When not in batch mode, listen for console input from the user.
+     * <br>
+     * <ul>
+     * <li>Pressing &lt;enter&gt; will start/stop listening.</li>
+     * <li>Pressing 'q' &lt;enter&gt; will quit the app.</li>
+     * </ul>
+     */
+    public void monitorConsoleEvents() {
+        write("Press enter to start capturing audio. (q <enter> to quit)");
+
+        BufferedReader br= new BufferedReader(new InputStreamReader(System.in));
+        while(true){
+            String s = null;
+            try {
+                s = br.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if( s != null && s.equalsIgnoreCase("q") )
+                shutdown();	// Shutdown the app if the user presses 'q'
+            if( s != null && s.length() == 0) {
+                toggleListening();	// Toggle listening mode if the user has pressed <enter>
+            }
+        }
+    }
+
+
+
+    // ********************* AUDIO CAPTURE / STREAMING *********************
+
+    static class AudioAnalyzer {
+        static public AudioPacket analyze(AudioPacket sample) {
+
+            int max = 0;
+            float energyLevel = 0.0F;
+
+            AudioFormat format = sample.format;
+            int readPoint = 0;
+            byte[] buffer = sample.audio;
+            int size = sample.size;
+
+            boolean use16Bit = (format.getSampleSizeInBits() == 16);
+            boolean signed = (format.getEncoding() == AudioFormat.Encoding.PCM_SIGNED);
+            boolean bigEndian = (format.isBigEndian());
+
+            float sum = 0.0F;
+            int sampleSize = 0;
+            double[] array = new double[2048];
+
+            if (use16Bit) {
+                for (int i = readPoint; i < size; i += 2) {
+                    int value = 0;
+                    // deal with endianness
+                    int hiByte = (bigEndian ? buffer[i] : buffer[i+1]);
+                    int loByte = (bigEndian ? buffer[i+1] : buffer [i]);
+                    if (signed) {
+                        short shortVal = (short) hiByte;
+                        shortVal = (short) ((shortVal << 8) | (byte) loByte);
+                        value = shortVal;
+                    } else {
+                        value = (hiByte << 8) | loByte;
+                    }
+                    max = Math.max(max, value);
+
+                    sum += value;
+                    array[sampleSize] = value;
+                    sampleSize += 1;
+
+                } // for
+            } else {
+                // 8 bit - no endianness issues, just sign
+                for (int i = readPoint; i < size; i++) {
+                    int value = 0;
+                    if (signed) {
+                        value = buffer [i];
+                    } else {
+                        short shortVal = 0;
+                        shortVal = (short) (shortVal | buffer [i]);
+                        value = shortVal;
+                    }
+                    max = Math.max (max, value);
+
+                    sum += value;
+                    array[sampleSize] = value;
+                    sampleSize += 1;
+
+                } // for
+            } // 8 bit
+            // express max as float of 0.0 to 1.0 of max value
+            // of 8 or 16 bits (signed or unsigned)
+            if (signed) {
+                if (use16Bit) { energyLevel = (float) max / MAX_16_BITS_SIGNED; }
+                else { energyLevel = (float) max / MAX_8_BITS_SIGNED; }
+            } else {
+                if (use16Bit) { energyLevel = (float) max / MAX_16_BITS_UNSIGNED; }
+                else { energyLevel = (float) max / MAX_8_BITS_UNSIGNED; }
+            }
+
+            sample.energyLevel = energyLevel;
+            sample.meanEnergyLevel = (sum / sampleSize) / ((signed) ? MAX_16_BITS_SIGNED : MAX_16_BITS_UNSIGNED);
+            sample.SNR = 20 * Math.log10(max);
+
+            return sample;
+        }
+    }
+
+    class SpeechDetectorSettings {
+        // Experiment with these parameters to find optimal performance for start of speech detection
+        //	The start of speech algorithm used in this sample app is very simple and not meant for production
+        //	To effectively disable start of speech detection, set audioEnergyThreshold to 0.0
+
+        int numPacketsToBufferStartOfSpeech = 7;		// Number of audio packets to buffer for start of speech detection
+        int numPacketsToBufferLeadingSilence = 12;		// Number of audio packets to buffer containing leading silence
+        float audioEnergyThreshold = ( isStartOfSpeechDetectionEnabled() ) ? 0.050F : 0.0F;
+        int endOfSpeechThreshold = 45;
+
+        double rmsDiffThreshold = 1.2;
+        double rmsAbsoluteThreshold = 600;
+
+    }
+
+    class SpeechDetectorContext {
+        SpeechDetectorSettings settings = new SpeechDetectorSettings();
+
+        boolean audioPacketHasSpeech = false;
+        boolean startOfSpeechDetected = false;
+        boolean endOfSpeechDetected = false;
+        int startOfSpeechThresholdCounter = 0;
+        int endOfSpeechThresholdCounter = 0;
+
+        CircularFifoQueue<AudioPacket> startOfSpeechQueue = new CircularFifoQueue<AudioPacket>(settings.numPacketsToBufferStartOfSpeech);	// Audio buffer to track start of speech detection
+        CircularFifoQueue<AudioPacket> leadingSilenceQueue = new CircularFifoQueue<AudioPacket>(settings.numPacketsToBufferLeadingSilence);	// Audio buffer to hold leading silence
+
+        AudioPacket lastAudioPacket = null;
+    }
+
+    /*
+     * This speech detector does some analysis on the pcm audio to calculate energy level, SNR, etc.
+     *
+     * It is very simple in that all it is evaluating is if a window of audio frames exceed a configured
+     * threshold value for energy level. This is not very robust, especially in noisy environments.
+     *
+     * Feel free to experiment to find a speech detection algorithm that works best for your solution. For
+     * example, leveraging the difference in mean energy level between the current and previous audio frames takes into account
+     * initial background noise and can be useful in noisier environments like the car.
+     *
+     */
+    protected SpeechDetectorContext speechDetector(AudioPacket audioPacket, SpeechDetectorContext c) {
+
+        // Get energy level of audio sample
+        audioPacket = AudioAnalyzer.analyze(audioPacket);
+        audioPacket.frameTime = (c.lastAudioPacket == null) ? 0 : c.lastAudioPacket.frameTime + 20;
+
+        if( c.lastAudioPacket != null ) {
+            audioPacket.rmsDiff = 20.0 * Math.log10(audioPacket.energyLevel / c.lastAudioPacket.energyLevel);
+        }
+        c.lastAudioPacket = audioPacket;
+
+        c.audioPacketHasSpeech = (audioPacket.energyLevel < c.settings.audioEnergyThreshold) ? false : true;
+
+        // Speech already detected. Just analyze audio and return...
+        if( c.startOfSpeechDetected ) {
+            if( c.audioPacketHasSpeech ) c.endOfSpeechThresholdCounter = 0;
+            else c.endOfSpeechThresholdCounter++;
+
+            c.endOfSpeechDetected = (c.endOfSpeechThresholdCounter == c.settings.endOfSpeechThreshold) ? true : false;
+
+            return c;
+        }
+
+        // Audio packet containing speech has been detected...
+        if( c.audioPacketHasSpeech )  {
+            // Start of speech has been detected - start sending NCS query commands and buffered audio to NCS cloud
+            if( ++c.startOfSpeechThresholdCounter == c.settings.numPacketsToBufferStartOfSpeech ) {
+                c.startOfSpeechDetected = true;
+
+            }	// Audio packet contains speech, but we haven't reached our threshold yet. Keep buffering...
+            else {
+                c.startOfSpeechDetected = false;
+            }
+
+            c.startOfSpeechQueue.add(audioPacket);
+
+        } // This audio packet is leading silence - buffer it
+        else {
+            c.startOfSpeechDetected = false;
+            c.leadingSilenceQueue.add(audioPacket);
+
+            // Reset start of speech counters and new buffer size
+            c.startOfSpeechQueue.clear();
+            c.startOfSpeechThresholdCounter = 0;
+        }
+
+        return c;
+    }
+
+    /*
+     * Always include a recording timeout in case end of speech detection fails or the user forgets to stop recording
+     */
+    boolean recorderTimedOut = false;
+    Thread recorderMonitorThread = null;
+    Runnable recordingTimeoutMonitor = new Runnable() {
+
+        @Override
+        public void run() {
+            recorderTimedOut = false;
+
+            synchronized(recorderWaitLock) {
+                try {
+                    write("Recording timer started...");
+                    recorderWaitLock.wait(recorderTimeout);
+
+                    if( listening ) {
+                        write( "Recording timed out!" );
+                        recorderTimedOut = true;
+                        stopListening();
+
+                    }
+                } catch( InterruptedException e ) {
+                    // Timer cancelled. Nothing to do...
+                    write("Recording monitor interrupted...");
+                }
+            }
+
+        }
+
+    };
+
+    /**
+     * Capture audio.
+     */
+    protected void captureAudio() {
+        try {
+
+            // Initialize audio format for built-in speaker data line
+            final AudioFormat format = getFormat();
+            DataLine.Info info = new DataLine.Info( TargetDataLine.class, format );
+            if( verbose ) write( "Audio Data line Info: " + info );
+
+            // Open and start capturing audio over the built-in speaker data line
+            line = (TargetDataLine) AudioSystem.getLine(info);
+            line.open(format);
+            line.start();
+
+            // Calculate audio buffer size for a 20ms frame ( 50 * 20ms = 1s )
+            //	Sanity Check: bufferSize should end up being 640 bytes for this sample app [ (16000Khz * 16bits) / 50 ]
+            final int bufferSize = (int) ((format.getSampleRate() * format.getFrameSize()) / 50);
+            write("bufferSize: " + bufferSize);
+
+            Runnable runner = new Runnable() {
+
+                public void run() {
+
+                    // app state is now in listening mode...
+                    listening = true;
+
+                    try {
+                        /** Save audio to file. If a folder was provided at the command line, use it. Otherwise, save to present working directory */
+                        File dir = ( audioPath == null) ? new File(".") : new File(audioPath);
+
+                        // Filename created is audio-{timestamp}.pcm
+                        long unixTime = System.currentTimeMillis() / 1000L;
+                        File fout = new File(dir.getCanonicalPath() + File.separator + "audio-" + unixTime + ".pcm");
+                        File fout2 = new File(dir.getCanonicalPath() + File.separator + "audio-" + unixTime + ".log");
+                        dir = new File(fout.getParent());
+                        if( verbose ) write("Writing to " + fout.getCanonicalPath());
+
+                        // Create path and file if they do not exist
+                        if( !fout.exists() ) {
+                            dir.mkdirs();
+                            fout.createNewFile();
+                            fout2.createNewFile();
+                        }
+
+                        String boundary = null;
+
+                        // Create the file output stream...
+                        OutputStream FileOutput = new FileOutputStream(fout);
+                        PrintWriter FileOutput2 = new PrintWriter(fout2);
+                        String separator = "\t";
+
+                        boolean queryCommandsSent = false;			// Only send NCS Query Commands once, after start of speech has been detected
+                        queryFailed = false;
+
+                        SpeechDetectorContext c = new SpeechDetectorContext();
+
+                        write("Listening...");
+
+                        if( recorderMonitorThread != null ) recorderMonitorThread.interrupt();
+                        recorderMonitorThread = new Thread(recordingTimeoutMonitor);
+                        recorderMonitorThread.start();
+
+                        while (listening && !queryFailed) {
+                            // Create and read in a 20ms frame of raw pcm audio
+                            byte buffer[] = new byte[bufferSize];
+                            int count = line.read(buffer, 0, buffer.length);
+
+                            if( count > 0 ) {
+                                //FileOutput.write( buffer, 0, count );	// for debug...
+
+                                // Analyze the audio
+                                c = speechDetector(new AudioPacket(format, buffer, buffer.length), c);
+
+                                String audioLogData = (c.lastAudioPacket.frameTime + separator +
+                                        c.audioPacketHasSpeech + separator +
+                                        String.format("%.2f", c.lastAudioPacket.SNR) + separator +
+                                        String.format("%.2f", c.lastAudioPacket.energyLevel * 100) + separator  +
+                                        String.format("%.2f", c.lastAudioPacket.rmsDiff) + separator +
+                                        String.format("%.5f", c.lastAudioPacket.meanEnergyLevel * 1000F));
+
+                                if( verbose ) write("[" + audioLogData + "] ");
+                                FileOutput2.println(audioLogData);
+
+                                if( c.startOfSpeechDetected ) {
+
+                                    if( queryCommandsSent) {
+                                        if( c.endOfSpeechDetected ) {
+                                            write( "End of speech detected!" );
+                                            stopListening();
+
+                                            synchronized(recorderWaitLock) {
+                                                try {
+                                                    recorderWaitLock.notifyAll();
+                                                } catch( IllegalMonitorStateException e ) {
+                                                    write( e.getMessage() );
+                                                }
+                                            }
+
+                                        }
+
+                                        ByteBuffer bbuf = ByteBuffer.wrap(buffer, 0, count);
+                                        sendAudioChunk(out, bbuf.array(), boundary);
+                                        FileOutput.write(buffer, 0, count);
+
+                                    } else {
+                                        write("Start of speech detected!");
+                                        recorderMonitorThread.interrupt();
+                                        recorderMonitorThread = new Thread(recordingTimeoutMonitor);
+                                        recorderMonitorThread.start();
+
+                                        write("Sending NCS Query commands...");
+                                        boundary = sendAsrQueryCommands();
+                                        queryCommandsSent = true;
+
+                                        transactionLatency.setMarker(Marker.audio_streaming_begin);
+
+                                        // Even better would be encoding the pcm as opus before sending it over the wire...
+
+                                        // Send the leading silence. NCS recognition performs better when there is some leading silence...
+                                        Iterator<AudioPacket> itr1 = c.leadingSilenceQueue.iterator();
+                                        while(itr1.hasNext()) {
+                                            AudioPacket packet = itr1.next();
+                                            FileOutput.write( packet.audio, 0, packet.size);
+                                            sendAudioChunk(out, ByteBuffer.wrap(packet.audio, 0, packet.size).array(), boundary);
+                                        }
+                                        // Send the buffered audio containing initial speech
+                                        Iterator<AudioPacket> itr2 = c.startOfSpeechQueue.iterator();
+                                        while(itr2.hasNext()){
+                                            AudioPacket packet = itr2.next();
+                                            FileOutput.write( packet.audio, 0, packet.size);
+                                            sendAudioChunk(out, ByteBuffer.wrap(packet.audio, 0, packet.size).array(), boundary);
+                                        }
+
+                                    }
+                                } else {
+                                    continue;
+                                }
+                            } // count > 0
+                        } // while listening
+
+                        if( recorderMonitorThread.isAlive() )
+                            recorderMonitorThread.interrupt();
+
+                        if (!stopRequested) closeInputLine();
+                        stopRequested = false;
+
+                        write("Done listening");
+                        if( verbose ) write("Done saving audio to file");
+                        FileOutput.close();
+                        FileOutput2.close();
+
+                        if(!queryCommandsSent) {
+                            fout.delete();	// Don't bother keeping the audio file...
+                            write("No speech detected - request not sent.");
+                            out.close();
+                        }
+                        else {
+                            transactionLatency.setMarker(Marker.audio_streaming_end);
+                            _logData.audioDuration = ( fout.length() / bufferSize ) / 50F; // capture audio duration in seconds...
+                            sendTerminatingChunk(out, boundary);	// if query commands have been sent, ALWAYS send the terminating chunk to release server-side resources
+                            write("Processing ...");
+                            wait4TerminateSignal(getTxnTimeout());
+                        }
+
+
+                    } catch (IOException e) {
+                        write("I/O problems: " + e);
+                        System.exit(-1);
+                    }
+                }
+            };
+            Thread captureThread = new Thread(runner);
+            captureThread.start();
+
+        } catch (LineUnavailableException e) {
+            write("Line unavailable: " + e);
+            System.exit(-2);
+
+        }
+    }
+
+    /**
+     * Stream audio file.
+     *
+     * @param audioFile the audio file
+     */
+    protected void streamAudioFile(File audioFile) {
+
+        final AudioFormat format = getFormat();
+        final int bufferSize = (int) ((format.getSampleRate() * format.getFrameSize()) / 50);
+
+        Runnable runner = new Runnable() {
+            public void run() {
+
+                String boundary = null;
+                AudioFormat format = getFormat();
+                SpeechDetectorContext c = new SpeechDetectorContext();
+                boolean queryCommandsSent = false;
+                headersSent = false;
+
+                try {
+                    write("Streaming audio...");
+                    transactionLatency.setMarker(Marker.audio_streaming_begin);
+
+                    int audioDuration = 0;
+                    byte[] audio = FileLoader.load(audioFile);
+                    AudioChopper chopper = AudioChopperFactory.getAudioChopper(_requestData.IN_CODEC, audio);
+
+                    if( chopper != null ) {
+                        write("Sending");
+
+                        while(chopper.hasMoreFrame() && !queryFailed && !queryCancelled)
+                        {
+                            byte[] buffer = chopper.getNextFrame();
+                            c = speechDetector(new AudioPacket(format, buffer, buffer.length), c);
+                            if( verbose ) write(" [audio level: " + c.lastAudioPacket.energyLevel + "] ");
+
+                            if( c.startOfSpeechDetected ) {
+                                if( queryCommandsSent) {
+                                    sendAudioChunk(out, buffer, boundary);
+                                } else {
+                                    write("Start of speech detected!");
+
+                                    write("Sending NCS Query commands...");
+                                    boundary = sendAsrQueryCommands();
+                                    queryCommandsSent = true;
+
+                                    transactionLatency.setMarker(Marker.audio_streaming_begin);
+
+                                    // Send the leading silence. NCS recognition performs better when there is some leading silence...
+                                    Iterator<AudioPacket> itr1 = c.leadingSilenceQueue.iterator();
+                                    while(itr1.hasNext()) {
+                                        AudioPacket packet = itr1.next();
+                                        sendAudioChunk(out, ByteBuffer.wrap(packet.audio, 0, packet.size).array(), boundary);
+                                    }
+
+                                    // Send the buffered audio containing initial speech
+                                    Iterator<AudioPacket> itr2 = c.startOfSpeechQueue.iterator();
+                                    while(itr2.hasNext()){
+                                        AudioPacket packet = itr2.next();
+                                        sendAudioChunk(out, ByteBuffer.wrap(packet.audio, 0, packet.size).array(), boundary);
+                                    }
+
+                                }
+
+                                int wait = chopper.getFrameLengthInMs();
+                                synchronized(this) {
+                                    this.wait(wait);	// Simulate real-time streaming of audio (20ms frames)
+                                }
+                                audioDuration += wait;
+
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+                    else {
+                        write("WARNING - Real-time Audio Streaming Emulation Not Available for Audio File Type: " + _requestData.IN_CODEC);
+                        FileInputStream inputStream = new FileInputStream(audioFile);
+                        int nRead = 0;
+                        while( nRead != -1 && !queryFailed && !queryCancelled ) {
+                            byte[] buffer = new byte[bufferSize];
+                            nRead = inputStream.read(buffer, 0, bufferSize);
+                            if( nRead > 0 ) {
+                                ByteBuffer bbuf = ByteBuffer.wrap(buffer, 0, nRead);
+                                sendAudioChunk(out, bbuf.array(), boundary);
+                                synchronized(this) {
+                                    this.wait(20);	// Simulate real-time streaming of audio (20ms frames)
+                                }
+                            }
+                        }
+                        inputStream.close();
+                    }
+                    write();
+
+                    if( c.startOfSpeechDetected && queryCommandsSent) {
+                        transactionLatency.setMarker(Marker.audio_streaming_end);
+                        if( audioDuration == 0 )	// AudioChopper was not used, so assuming 20ms frames...
+                            _logData.audioDuration = ( audioFile.length() / bufferSize ) / 50F;
+                        else
+                            _logData.audioDuration = audioDuration;
+
+                        /** Notify the NCS service that the request is complete */
+                        sendTerminatingChunk(out, boundary);
+
+                        write("\nProcessing ...");
+
+                    } else {
+                        write("No speech detected!");
+                    }
+
+                } catch (IOException | InterruptedException e) {
+                    write("I/O problems: " + e);
+                    System.exit(-1);
+                } catch ( Exception e ) {
+                    write("Exception: " + e);
+                    System.exit(-1);
+                }
+                finally {
+                    if( latch != null ) latch.countDown();
+                }
+            }
+        };
+        Thread fileStreamThread = new Thread(runner);
+        fileStreamThread.start();
+    }
+
+    /**
+     * Gets the desired audio format.
+     *
+     * Sample rate = 16Khz
+     * Sample site = 16bits
+     * Num Channels = 1
+     * Signed = true
+     * Big Endian = false
+     *
+     * @return the format
+     */
+    protected AudioFormat getFormat() {
+        float sampleRate = 16000;
+        int sampleSizeInBits = 16;
+        int channels = 1;
+        boolean signed = true;
+        boolean bigEndian = false;
+        return new AudioFormat(sampleRate,
+                sampleSizeInBits, channels, signed, bigEndian);
+    }
+
+
+    // ********************* CONNECTION AND NCS COMMAND HANDLERS *********************
+
+    // Monitor socket timeout so app properly stops listening if no speech detected or recorder timeout fails...
+    private volatile Thread connectionMonitorThread = null;
+    private volatile static Object connectionWaitLock = new Object();
+    protected int connectionTimeout = 60000;
+    protected volatile boolean connectionTimedOut = false;
+    protected volatile boolean headersSent = false;
+    private volatile boolean reuseStatusCode = false;
+
+    Runnable connectionTimeoutMonitor = new Runnable() {
+
+        @Override
+        public void run() {
+            connectionTimedOut = false;
+
+            synchronized(connectionWaitLock) {
+                try {
+                    write( "Connection timer started..." );
+                    connectionWaitLock.wait(connectionTimeout);
+
+                    write( "Connection timed out!" );
+
+                    // reset some flags...
+                    connectionTimedOut = true;
+                    headersSent = false;
+                    reuseStatusCode = false;
+                    br.close();
+
+                    if( listening ) {
+                        stopListening();
+                    }
+
+                } catch( InterruptedException e) {
+                    // Timer cancelled. Nothing to do...
+                    write( "Connection timer interrupted..." );
+                } catch( IOException e ) {
+                    write("Error closing socket reader: " + e.getMessage());
+                }
+            }
+
+        }
+
+    };
+
+    /**
+     * Initiate a web socket connection to the server and send a "connect" message to NCS.
+     */
+    protected Socket connectToServer() {
+        try {
+
+            // Create a socket connection to the server...
+            if( s == null || s.isClosed() ) {
+                write("Creating socket connection");
+                s = SocketFactory.createSocket(_host, _port, _useTLS, _requireTrustedRootCert);
+                br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+
+                transactionLatency.setMarker(Marker.connected);
+                _logData.timeToConnect = transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.connected);
+                write("Time to establish socket connection: " + _logData.timeToConnect);
+
+                connectionTimeout = s.getSoTimeout();
+                write("Keep Alive Enabled: " + s.getKeepAlive());
+                write("Socket Timeout: " + s.getSoTimeout());
+
+                if( connectionMonitorThread != null ) {
+                    connectionMonitorThread.interrupt();
+                }
+
+            }
+            else {
+                write("Socket connection already created");
+
+                transactionLatency.setMarker(Marker.connected);
+                _logData.timeToConnect = transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.connected);
+                write("Time to establish socket connection: " + _logData.timeToConnect);
+
+                // Interrupt any previously started connection monitor. We'll reset the timer below...
+                connectionMonitorThread.interrupt();
+            }
+
+            // Send the headers to force a connection prior to audio capture to help minimize latency due to connection overhead
+            if( !headersSent ) {
+                /** Create a boundary for multi-part data upload */
+                boundary = UUID.randomUUID().toString().replaceAll("-", "");
+                out = s.getOutputStream();
+
+                /** Send headers... */
+                sendHeaders(out, _host, boundary);
+                headersSent = true;
+            }
+
+            // Monitor the connection timeout
+            connectionMonitorThread = new Thread(connectionTimeoutMonitor);
+            connectionMonitorThread.start();
+
+            return s;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(-2);
+        }
+
+        return null;
+    }
+
+    /**
+     * Send the sequence of Nuance Cloud Service Query commands in the recommended order.
+     * <br><br>
+     * These commands are sent after a successful connection is established, and just prior to streaming any audio after start-of-speech has been detected.
+     * <br>
+     * <ol>
+     * <li>QueryBegin</li>
+     * <li>QueryParameter [REQUEST_INFO]</li>
+     * <li>QueryParameter [AUDIO_INFO]</li>
+     * <li>QueryEnd</li>
+     * <li>AudoBegin</li>
+     * </ol>
+     * <br>
+     * The cloud service does not start processing audio until it receives the QueryEnd message.
+     * So although it's a bit counter-intuitive, it's important to send this message before streaming the audio to minimize any latency.
+     *
+     */
+    protected String sendAsrQueryCommands() {
+
+        /** Create a secure socket */
+        Socket s = connectToServer();
+
+        /** Listen and process the NCS response on a separate thread.
+         * This is necessary for receiving word-by-word results while streaming audio to the server
+         */
+        class ResultListener implements Runnable
+        {
+            Socket _s;
+            ResultListener(Socket s) {
+                _s = s;
+            }
+
+            public void run() {
+                try
+                {
+                    processResponse(_s);
+                }
+                catch (UnknownHostException e) {
+                    e.printStackTrace();
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                } catch (JSONException e1) {
+                    e1.printStackTrace();
+                }
+            }
+        }
+        Thread t = new Thread(new ResultListener(s));
+        t.start();
+
+		/*
+		 * Refer to the "NCS HTTP Services 2.0 Users Guide" for more details on integrating via HTTP Services
+		 */
+
+        transactionLatency.setMarker(Marker.query_begin);
+
+        /** Send the NCS Command request data */
+        sendRequestData(out, _appId, _appKey, _userID, _requestData.getApplicationSessionID(), _requestData.getUtteranceNumber(), boundary);
+
+        /** Send the Dictation parameters */
+        sendDictParameter(out, boundary);
+
+        transactionLatency.setMarker(Marker.query_complete);
+
+        return boundary;
+    }
+
+    /**
+     * Send the sequence of Nuance Cloud Service Query commands for Text NLU in the recommended order.
+     * <br><br>
+     * These commands are sent after a successful connection is established, and just prior to streaming any audio after start-of-speech has been detected.
+     * <br>
+     * <ol>
+     * <li>QueryBegin</li>
+     * <li>QueryParameter [REQUEST_INFO]</li>
+     * <li>QueryEnd</li>
+     * </ol>
+     *
+     */
+    protected String sendNluTextQueryCommands() {
+
+        /** Create a secure socket */
+        Socket s = connectToServer();
+
+        /** Listen and process the NCS response on a separate thread.
+         * This is necessary for receiving word-by-word results while streaming audio to the server */
+        class ResultListener implements Runnable
+        {
+            Socket _s;
+            ResultListener(Socket s) {
+                _s = s;
+            }
+
+            public void run() {
+                try
+                {
+                    processResponse(_s);
+                }
+                catch (UnknownHostException e) {
+                    e.printStackTrace();
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                } catch (JSONException e1) {
+                    e1.printStackTrace();
+                }
+            }
+        }
+        Thread t = new Thread(new ResultListener(s));
+        t.start();
+
+		/*
+		 * Refer to the "NCS HTTP Services 2.0 Users Guide" for more details on integrating via HTTP Services
+		 */
+
+        transactionLatency.setMarker(Marker.query_begin);
+
+        /** Send the NCS Command request data */
+        sendRequestData(out, _appId, _appKey, _userID, _requestData.getApplicationSessionID(), _requestData.getUtteranceNumber(), boundary);
+
+        /** Send the Dictation parameters */
+        transactionLatency.setMarker(Marker.audio_streaming_begin);	// re-using audio_streaming markers to simplify logging logic
+        sendDictParameter(out, boundary);
+        transactionLatency.setMarker(Marker.audio_streaming_end);
+
+        transactionLatency.setMarker(Marker.query_complete);
+
+        return boundary;
+
+    }
+
+    /**
+     * Refer to the "NCS HTTP Services 2.0 Users Guide" for more details on headers that need to be sent with a dictation request
+     *
+     * @param out
+     * @param host
+     * @param boundary
+     */
+    protected void sendHeaders(OutputStream out, String host, String boundary) {
+
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append("POST /NmspServlet/ HTTP/1.1\r\n");
+            sb.append("Host: " + host + "\r\n");
+            sb.append("Connection: Keep-Alive\r\n");
+            sb.append("Keep-Alive: timeout=100\r\n");
+            sb.append("User-Agent: " + RequestData.APP_NAME + " " + RequestData.APP_VERSION + "\r\n");
+            sb.append("Transfer-Encoding: chunked\r\n");
+            sb.append("Content-Type: multipart/form-data; boundary=" + boundary + "\r\n");
+            sb.append("\r\n");
+
+            out.write(sb.toString().getBytes());
+            out.flush();
+
+            Chunk chunk = new Chunk();
+            chunk.append(sb.toString());
+            this.printDataSent(chunk);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Refer to the "NCS HTTP Services 2.0 Users Guide" for more details on Request Data that need to be sent with a dictation request
+     *
+     * @param out
+     * @param appId
+     * @param appKey
+     * @param uId
+     * @param appSessionId
+     * @param uttNumber
+     * @param boundary
+     */
+    protected void sendRequestData(OutputStream out, String appId, String appKey, String uId, String appSessionId, int uttNumber, String boundary) {
+
+        try {
+
+            JSONObject json = new JSONObject();
+            JSONObject cmdDict = new JSONObject();
+
+            json.put("appId", appId);
+            json.put("appKey", appKey);
+            json.put("uId", uId);
+            json.put("inCodec", _requestData.IN_CODEC);
+            json.put("outCodec", _requestData.OUT_CODEC);
+            json.put("cmdName", ( isNluEnabled() ? ( (isNluTextEnabled()) ? RequestData.COMMAND_NAME_NLU_TEXT : RequestData.COMMAND_NAME_NLU_ASR ) : RequestData.COMMAND_NAME_ASR ) );
+            json.put("appName", RequestData.APP_NAME);
+            json.put("appVersion", RequestData.APP_VERSION);
+            json.put("language", _requestData.LANGUAGE);
+            //json.put("cmdTimeout", "10000");		// Optional. Reduce the value of cmdTimeout (in ms) if waiting for a long-running transaction is a concern...
+            json.put("carrier", RequestData.CARRIER);
+            json.put("deviceModel", _requestData.DEVICE_MODEL);
+
+            cmdDict.put("dictation_type", _requestData.DICTATION_TYPE);
+            cmdDict.put("dictation_language", _requestData.LANGUAGE);
+            cmdDict.put("application", _requestData.APPLICATION);
+            cmdDict.put("locale", RequestData.LOCALE);
+            cmdDict.put("application_name", RequestData.APP_NAME);
+            cmdDict.put("organization_id", RequestData.ORGANIZATION_ID);
+            cmdDict.put("phone_OS", _requestData.PHONE_OS);
+            cmdDict.put("phone_network", RequestData.PHONE_NETWORK);
+            cmdDict.put("audio_source", RequestData.AUDIO_SOURCE);
+            cmdDict.put("location", RequestData.LOCATION);
+            cmdDict.put("application_session_id", appSessionId);
+            cmdDict.put("utterance_number", uttNumber);
+            cmdDict.put("ui_language", RequestData.UI_LANGUAGE);
+            cmdDict.put("phone_submodel", _requestData.PHONE_SUBMODEL);
+            cmdDict.put("application_state_id", RequestData.APPLICATION_STATE_ID);
+
+            json.put("cmdDict", cmdDict);
+
+            Chunk chunk = new Chunk();
+            chunk.append("--" + boundary + "\r\n");
+            chunk.append("Content-Disposition: form-data; name=\"RequestData\"\r\n");
+            chunk.append("Content-Type: application/json; charset=utf-8\r\n");
+            chunk.append("Content-Transfer-Encoding: 8bit\r\n");
+            chunk.append("\r\n");
+            chunk.append(json.toString(2));
+            chunk.append("\r\n");
+            chunk.writeTo(out);
+
+            this.printDataSent(chunk);
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    /**
+     * The DictParameter contains an NCS REQUEST_INFO dictionary. This example illustrates the required start, end, and text
+     * parameters. However, the REQUEST_INFO dictionary has many available options for managing the interaction with NCS Services.
+     * For example, for a Dictation request, the format of the result can be specified. Features such as word-by-word streaming,
+     * auto-punctuation, and profanity filtering can also be specified. And custom application language models can be requested.
+     * In order to take advantage of some of these features, server-side provisioning unique to your App Id must first be implemented.
+     * Please coordinate with Sales to engage with Professional Services if you'd like to explore these advanced features.
+     *
+     */
+    protected void sendDictParameter(OutputStream out, String boundary) {
+        try {
+            JSONObject json = new JSONObject();
+            json.put("start",0);
+            json.put("end",0);
+            json.put("text","");
+            json.put("nbest_text_results", 1);
+
+            if(_streamingResults)
+                json.put("intermediate_response_mode", "NoUtteranceDetectionWithPartialRecognition");
+
+            if(_profanityFilteringEnabled)
+                json.put("enable_profanity_filtering", 1);
+
+            //json.put("wake_up_phrase", "Hello Joe");
+
+            if( isNluEnabled() ) {
+                JSONObject appServerData = new JSONObject();
+
+                appServerData.put("nlps_return_abstract_nlu", 1);
+                appServerData.put("nlps_use_adk", 1);
+
+                if( isNluTextEnabled() ) {
+                    appServerData.put("message", _message);
+                }
+
+                json.put("appserver_data", appServerData);
+            }
+
+            Chunk chunk = new Chunk();
+            chunk.append("--" + boundary + "\r\n");
+            chunk.append("Content-Disposition: form-data; name=\"DictParameter\";paramName=\"REQUEST_INFO\"\r\n");
+            chunk.append("Content-Type: application/json; charset=utf-8\r\n");
+            chunk.append("Content-Transfer-Encoding: 8bit\r\n");
+            chunk.append("\r\n");
+            chunk.append(json.toString(2));
+            chunk.append("\r\n");
+            chunk.writeTo(out);
+
+            this.printDataSent(chunk);
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Send a chunk of audio
+     *
+     * @param out
+     * @param audioData
+     * @param boundary
+     */
+    protected void sendAudioChunk(OutputStream out, byte[] audioData, String boundary) {
+
+        try {
+            Chunk chunk = new Chunk();
+            chunk.append("--" + boundary + "\r\n");
+            chunk.append("Content-Disposition: form-data; name=\"ConcludingAudioParameter\";paramName=\"AUDIO_INFO\"\r\n");
+            chunk.append("Content-Type: audio/x-wav;codec=pcm;bit=16;rate=16000\r\n");
+            chunk.append("Content-Transfer-Encoding: binary\r\n");
+            chunk.append("\r\n");
+            chunk.append(audioData);
+            chunk.append("\r\n");
+            chunk.writeTo(out);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            this.queryFailed = true;
+            //System.exit(-2);
+        }
+    }
+
+    /**
+     * The request dictionary data for resetting a user's acoustic and language model profiles on the server.
+     *
+     */
+    protected void sendUserProfileResetRequestData(OutputStream out, String boundary) {
+        try {
+
+            JSONObject json = new JSONObject();
+            JSONObject cmdDict = new JSONObject();
+
+            json.put("appId", this._appId);
+            json.put("appKey", this._appKey);
+            json.put("uId", this._userID);
+            json.put("inCodec", _requestData.IN_CODEC);
+            json.put("outCodec", _requestData.OUT_CODEC);
+            json.put("cmdName", "NVC_RESET_USER_PROFILE_CMD");
+            json.put("appName", RequestData.APP_NAME);
+            json.put("appVersion", RequestData.APP_VERSION);
+            json.put("language", _requestData.LANGUAGE);
+            //json.put("cmdTimeout", "10000");		// Optional. Reduce the value of cmdTimeout if waiting for a long-running transaction is a concern...
+            json.put("carrier", RequestData.CARRIER);
+            json.put("deviceModel", _requestData.DEVICE_MODEL);
+
+            cmdDict.put("dictation_language", _requestData.LANGUAGE);
+            cmdDict.put("locale", RequestData.LOCALE);
+            cmdDict.put("application_name", RequestData.APP_NAME);
+            cmdDict.put("organization_id", RequestData.ORGANIZATION_ID);
+            cmdDict.put("phone_OS", _requestData.PHONE_OS);
+            cmdDict.put("phone_network", RequestData.PHONE_NETWORK);
+            cmdDict.put("audio_source", RequestData.AUDIO_SOURCE);
+            cmdDict.put("location", RequestData.LOCATION);
+            cmdDict.put("ui_language", RequestData.UI_LANGUAGE);
+            cmdDict.put("phone_submodel", _requestData.PHONE_SUBMODEL);
+            cmdDict.put("application_state_id", RequestData.APPLICATION_STATE_ID);
+
+            json.put("cmdDict", cmdDict);
+
+            Chunk chunk = new Chunk();
+            chunk.append("--" + boundary + "\r\n");
+            chunk.append("Content-Disposition: form-data; name=\"RequestData\"\r\n");
+            chunk.append("Content-Type: application/json; charset=utf-8\r\n");
+            chunk.append("Content-Transfer-Encoding: 8bit\r\n");
+            chunk.append("\r\n");
+            chunk.append(json.toString(2));
+            chunk.append("\r\n");
+            chunk.writeTo(out);
+
+            this.printDataSent(chunk);
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    /**
+     * Notify the NCS service that all request data and audio has been sent
+     *
+     * @param out
+     * @param boundary
+     */
+    protected void sendTerminatingChunk(OutputStream out, String boundary) {
+
+        try {
+            Chunk chunk = new Chunk();
+            chunk.append("--" + boundary + "--\r\n");
+            chunk.writeTo(out);
+
+            Chunk terminatingChunk = new Chunk();
+            terminatingChunk.writeTo(out);
+
+            this.printDataSent(chunk);
+            write("Sent terminating chunk.");
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
+     *  Read and print out response from the server
+     *
+     *  Please refer to the HTTP 2.0 User Guide and NCS Command Specification, available from Professional Services,
+     *  for additional details of NCS responses and how to parse out specific elements
+     *
+     * @param s
+     * @throws IOException
+     * @throws JSONException
+     */
+    protected void processResponse(Socket s) throws IOException, JSONException {
+
+        ResponseParser rp = new ResponseParser();
+
+        try {
+            String t;
+            boolean firstResponse = !reuseStatusCode;	// true;
+            boolean headersParsed = false;
+            boolean successfulStatusCode = true;
+            Map<String, String> headers = new HashMap<String, String>();
+            Map<String, String> bodyParts;
+            String boundary = null;
+            transactionLatency.removeMarker(Marker.initial_response);
+
+            while((t = br.readLine()) != null) {
+
+                if( firstResponse ) {
+
+                    firstResponse = false;
+
+                    if( !t.contains("200") && !t.contains("201") ) {
+                        successfulStatusCode = false;
+                        queryFailed = true;
+                    }
+
+                    write("Status Line: " + t);
+                    reuseStatusCode = true;
+                    continue;
+                }
+                if( !firstResponse && !headersParsed ) {
+                    // parse headers...
+                    headers = rp.parseHeaders(br);
+                    headersParsed = true;
+
+                    write("\r\nHeaders: ");
+                    for( Map.Entry<String, String> entry : headers.entrySet() ) {
+                        write( "\t" + entry.getKey() + ": " + entry.getValue() );
+                    }
+                    write();
+
+                    // Save the session id. This is critical for debugging issues with the service
+                    if( headers.containsKey("nuance-sessionid") )
+                        _logData.sessionId = headers.get("nuance-sessionid");
+
+                    // Save the multi-part boundary if it exists. We'll need this to properly parse remaining body content
+                    if( headers.containsKey("content-type") ) {
+                        String contentType = headers.get("content-type");
+                        if( contentType.contains("boundary=") ) {
+                            String[] arr = contentType.split("=", 2);
+                            if( arr != null && arr.length == 2 )
+                                boundary = arr[1];
+                        }
+                    }
+
+                    continue;
+                }
+                if( headersParsed && !successfulStatusCode ) {
+                    // There won't be any structured body content, so just print out the response body as is
+                    // For a real-world app, you'll need to inspect the status line in more detail and provide appropriate error handling
+                    write(t);
+                    // If the server has sent a value of "0", this indicates that the last multi-part response has been received and we can stop looping...
+                    if( t.equals("0") ) {
+                        if( transactionLatency.getMarker(Marker.initial_response) == -1 ) {
+                            transactionLatency.setMarker(Marker.initial_response);
+                            write();
+                            if( _streamingResults ) {
+                                write("Time from first audio packet to first reponse: " + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.initial_response) + " seconds");
+                                _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.initial_response);
+                            } else {
+                                write("Time from last audio packet to first reponse: " + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.initial_response) + " seconds");
+                                _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.initial_response);
+                            }
+                        }
+
+                        if( transactionLatency.getMarker(Marker.final_response) == -1 ) {
+                            transactionLatency.setMarker(Marker.final_response);
+                            _logData.timeToFinalResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.final_response);
+                        }
+                        break;
+                    }
+
+                    continue;
+                }
+                if( headersParsed && successfulStatusCode ) {
+
+                    if( transactionLatency.getMarker(Marker.initial_response) == -1 ) {
+                        transactionLatency.setMarker(Marker.initial_response);
+                        write();
+                        if( _streamingResults ) {
+                            write("Time from first audio packet to first reponse: " + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.initial_response) + " seconds");
+                            _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.initial_response);
+                        } else {
+                            write("Time from last audio packet to first reponse: " + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.initial_response) + " seconds");
+                            _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.initial_response);
+                        }
+                    }
+
+                    // If the response is not a chunked response containing boundaries, then the last buffer read should contain results...
+                    if( boundary == null && headers.containsKey("content-disposition") ) {
+                        bodyParts = new HashMap<String, String>();
+                        bodyParts.putAll(headers);
+                        bodyParts.put("json_1", t);
+                    }
+                    else	// hand off to body part parser...
+                        bodyParts = rp.parseBodyPart(br, boundary);
+
+                    // In case the server returns a header instead of a blank line between the last boundary and the new chunk...
+                    if( t.length() > 2 ) {
+                        String[] arr = t.split(":", 2);
+                        if (arr != null & arr.length == 2) {
+                            // Grab the entity header
+                            bodyParts.put(arr[0].trim().toLowerCase(), arr[1].trim().toLowerCase());
+                        }
+                    }
+
+                    if( bodyParts.containsKey("content-disposition") && bodyParts.get("content-disposition").contains("queryerror") ) {
+                        queryFailed = true;
+                        write("Server Response: ");
+                        write( bodyParts.get("json_1") );
+                    }
+                    else if( bodyParts.containsKey("content-disposition") && bodyParts.get("content-disposition").contains("queryretry") ) {
+                        queryFailed = true;
+                        write("Server Response: ");
+                        write( bodyParts.get("json_1") );
+                    }
+                    else if( bodyParts.containsKey("content-disposition") && bodyParts.get("content-disposition").contains("queryresult") ) {
+                        String json_1 = (bodyParts.containsKey("json_1")) ? bodyParts.get("json_1") : null;
+                        if( json_1 == null || !isJSON(json_1) )
+                            continue;
+
+                        JSONObject json = new JSONObject(json_1);
+
+                        if(json.has("final_response") && json.getInt("final_response") == 0) {
+                            if( json.has("transcriptions") )
+                                write("Streaming Response: " + json.getJSONArray("transcriptions").getString(0));
+                            else if( json.has("appserver_results") && json.getJSONObject("appserver_results").has("payload")
+                                    && json.getJSONObject("appserver_results").getJSONObject("payload").has("actions")
+                                    && json.getJSONObject("appserver_results").getJSONObject("payload").getJSONArray("actions").length() > 0
+                                    && json.getJSONObject("appserver_results").getJSONObject("payload").getJSONArray("actions").getJSONObject(0).has("text"))
+                                write("Streaming Response [text]: " + json.getJSONObject("appserver_results")
+                                        .getJSONObject("payload")
+                                        .getJSONArray("actions")
+                                        .getJSONObject(0)
+                                        .getString("text") );
+                            else if( json.has("appserver_results") && json.getJSONObject("appserver_results").has("payload")
+                                    && json.getJSONObject("appserver_results").getJSONObject("payload").has("actions")
+                                    && json.getJSONObject("appserver_results").getJSONObject("payload").getJSONArray("actions").length() > 0
+                                    && json.getJSONObject("appserver_results").getJSONObject("payload").getJSONArray("actions").getJSONObject(0).has("nbest_text"))
+                                write("Streaming Response [nbest text]: " + json.getJSONObject("appserver_results")
+                                        .getJSONObject("payload")
+                                        .getJSONArray("actions")
+                                        .getJSONObject(0)
+                                        .getJSONObject("nbest_text")
+                                        .getJSONArray("transcriptions")
+                                        .getString(0) );
+                            else
+                                write(json.toString(4));
+
+                        }
+                        else if(json.has("final_response") && json.getInt("final_response") == 1) {
+                            if( json.has("transcriptions") ) {
+                                write("Final Response: " + json.getJSONArray("transcriptions").getString(0));
+                                write("Final JSON Response: " + json.toString(4));
+                            }
+                            else if( json.has("appserver_results") && json.getJSONObject("appserver_results").has("payload")
+                                    && json.getJSONObject("appserver_results").getJSONObject("payload").has("actions")
+                                    && json.getJSONObject("appserver_results").getJSONObject("payload").getJSONArray("actions").length() > 0 ) {
+                                JSONArray actions = json.getJSONObject("appserver_results").getJSONObject("payload").getJSONArray("actions");
+                                for( int i = 0; i < actions.length(); i++ ) {
+                                    JSONObject action = actions.getJSONObject(i);
+                                    if( action.has("type") && action.getString("type").equalsIgnoreCase("nlu_results")) {
+                                        write("Final Response: " + action.getJSONObject("Input")
+                                                .getJSONArray("Interpretations")
+                                                .getString(0) );
+                                    }
+                                }
+                                write("Final JSON Response: " + json.toString(4));
+                            } else
+                                write("Unsupported Response Format: " + json.toString(4));
+                        }
+                        else
+                            write("Unknown Response: " + json.toString(4));
+
+
+                    }
+
+                    // If the size of the body part is 0, the server has sent the last multi-part response and we can stop looping...
+                    if( bodyParts.containsKey("size") && Integer.valueOf(bodyParts.get("size")) == 0 ) {
+                        if( transactionLatency.getMarker(Marker.final_response) == -1 ) {
+                            transactionLatency.setMarker(Marker.final_response);
+                            _logData.timeToFinalResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.final_response);
+                        }
+                        break;
+                    }
+
+                    continue;
+                }
+            }
+
+        } catch(SocketTimeoutException e) {
+            write("Socket Exception: " + e.getMessage());
+
+        } finally {
+            if( transactionLatency.getMarker(Marker.final_response) == -1 ) {
+                transactionLatency.setMarker(Marker.final_response);
+                _logData.timeToFinalResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.final_response);
+            }
+
+            printLineSeparator();
+            write("Done reading response...");
+
+            transactionLatency.setMarker(Marker.stop);
+            _logData.totalTrxnDuration = transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.stop);
+
+            this.printLineSeparator();
+            showLatencyMarkers();
+
+            /** LogData object will write important stuff to log.txt in csv format */
+            _logData.writeToFile();
+
+            synchronized(waitLock) {
+                try {
+                    waitLock.notifyAll();
+                } catch( IllegalMonitorStateException e ) {
+                    write( e.getMessage() );
+                }
+            }
+
+        }
+
+    }
+
+
+    // ********************* MISCELLANEOUS *********************
+
+    /**
+     * Routine to verify if a string is a valid JSON object
+     *
+     * @param str
+     * @return
+     */
+    protected boolean isJSON(String str) {
+        try
+        {
+            JSONObject json = new JSONObject(str);
+        }
+        catch (JSONException e) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Routine to verify if a string is numeric
+     *
+     * @param str
+     * @return
+     */
+    protected boolean isNumeric(String str) {
+        try
+        {
+            int size = Integer.parseInt(str, 16);
+        }
+        catch(NumberFormatException nfe)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * user (or device) id: Set the user id to a unique value that is persistent across usages of the app. Ideally this
+     * 		value is unique based on the combination of user + device as this is used to tune user-specific acoustic
+     * 		models. The acoustic model of each person is unique, and it's also unique across device types and network types
+     * 		due to the variation in mic and network quality. With that said, this value may also be used for per-device
+     * 		billing models, so the right algorithm needs to take both technical and business requirements into consideration.
+     * 		User Id must be <= 40 chars and valid characters include [a-z,A-Z,0-9] and underscores.
+     *
+     * application session id: Use this to track a sequence of NCS Transactions that belong together. For example,
+     * 		translation apps in which two users are conversing with one another, or a Personal Assistant with dialog
+     * 		turns. Pass in the same application session id with each transaction (e.g. ASR and TTS) so they can be
+     * 		linked together in our analytics. Create a new application session id to track a new or unrelated transaction
+     * 		request.
+     *
+     * utterance number: Use this to help track the dialog turns for a given application session. For applications
+     * 		where user input is typically one-and-done, this should be set to 1. However, if the application is designed
+     * 		to have dialog turns with the user or recognition error corrections for a given input field, increment the
+     * 		utterance number with each request.
+     *
+     */
+    protected void initialize() {
+        _userID = UserIDManager.createUserIDManager().initUserID();
+        _requestData.initApplicationSessionID();
+        _requestData.resetUtteranceNumber();
+    }
+
+    /**
+     * Write an empty line to console.
+     */
+    private void write() {
+        System.out.println();
+    }
+
+    /**
+     * Write a message with end of line to console.
+     *
+     * @param msg the msg
+     */
+    private void write(String msg) {
+        System.out.println(msg);
+    }
+
+    /** Help display some transaction timing markers */
+    protected void showLatencyMarkers() {
+
+        write( "marker\t\t\t\t\tDuration Since T0\tDuration Since Last Marker");
+        write( "[t0] " + Marker.start + "\t\t\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.start) + "sec\t\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.start) + "sec");
+        write( "[t1] " + Marker.connected + "\t\t\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.connected) + "sec\t\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.connected) + "sec");
+        write( "[t2] " + Marker.query_begin + "\t\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.query_begin) + "sec\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.connected, Marker.query_begin) + "sec");
+        write( "[t3] " + Marker.query_complete + "\t\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.query_complete) + "sec\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.query_begin, Marker.query_complete) + "sec");
+
+        write( "[t4] " + Marker.audio_streaming_begin + "\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.audio_streaming_begin) + "sec\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.query_begin, Marker.audio_streaming_begin) + "sec");
+        write( "[t5] " + Marker.audio_streaming_end + "\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.audio_streaming_end) + "sec\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.audio_streaming_end) + "sec");
+
+        if( _streamingResults )
+            write( "[t6] " + Marker.initial_response + "\t\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.initial_response) + "sec\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.initial_response) + "sec (from t4)");
+        else
+            write( "[t6] " + Marker.initial_response + "\t\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.initial_response) + "sec\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.initial_response) + "sec (from t5)");
+
+        if( _streamingResults )
+            write( "[t7] " + Marker.final_response + "\t\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.final_response) + "sec\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.final_response) + "sec");
+        else
+            write( "[t7] " + Marker.final_response + "\t\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.final_response) + "sec\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.initial_response, Marker.final_response) + "sec");
+
+        write( "[t8] " + Marker.stop + "\t\t\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.stop) + "sec\t\t" + transactionLatency.calculateDistanceBetweenMarkers(Marker.final_response, Marker.stop) + "sec");
+
+    }
+
+    /**
+     * Re-usable method to help make the generated output more readable
+     */
+    protected void printLineSeparator() {
+        write();
+        write("---------------------------------");
+        write();
+    }
+
+    protected void printDataSent( Chunk chunk ) {
+        if( isVerbose() ) {
+            write();
+            write("<<<<<< Sending >>>>>>");
+            try {
+                chunk.writeTo(System.out);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            write();
+        }
+    }
+
+    /**
+     * Wait to be signaled that the server has provided response.
+     * <br><br>
+     * The client will timeout waiting for a response. The default is 5000ms.
+     *
+     * @param timeout the timeout
+     */
+    private static void wait4TerminateSignal(int timeout) {
+        synchronized(waitLock) {
+            try {
+                waitLock.wait(timeout);
+            } catch( InterruptedException e ) {
+                System.out.println( e.getMessage() );
+            }
+        }
+    }
+
+
+    // ********************* REQUEST HANDLERS *********************
+
+    /* (non-Javadoc)
+     * @see com.nuance.http_2_0.asr.IHttpAsrClient#start(java.lang.String)
+     */
+    @Override
+    public void start(String audioFilename) {
+        this.start(audioFilename, Codec.PCM_16_16K, true);
+    }
+
+    @Override
+    public void start(String audioPath, String codec, boolean streamingResults) {
+
+        _requestData.IN_CODEC = codec;
+        _requestData.OUT_CODEC = codec;
+        _streamingResults = streamingResults;
+
+        /** First, initialize a few parameters that will be passed in as part of the request to NCS Services */
+        this.initialize();
+        printLineSeparator();
+
+        if( batchModeEnabled() )
+            batchModeAsr(audioPath);
+        else if( audioPath != null )
+            batchModeAsr(audioPath);
+        else
+            monitorConsoleEvents();
+
+    }
+
+
+    /**
+     * Batch mode asr.
+     *
+     * @param path the path
+     */
+    protected void batchModeAsr(String path) {
+
+        // Loop thru and process each file in the path provided.
+        //	NOTE: Assumes all files are valid raw PCM 16K 16bit audio
+        File dir = new File(path);
+        FilenameFilter fileNameFilter = new FilenameFilter() {
+
+            @Override
+            public boolean accept(File dir, String name) {
+                write(name);
+                if(name.lastIndexOf('.')>0)
+                {
+                    // get last index for '.' char
+                    int lastIndex = name.lastIndexOf('.');
+
+                    // get extension
+                    String str = name.substring(lastIndex);
+
+                    // match path name extension
+                    if( str.equalsIgnoreCase(".pcm") || str.equalsIgnoreCase(".raw") )
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
+        File[] directoryListing = dir.listFiles(fileNameFilter);
+        if ( directoryListing != null) {
+            for (File file : directoryListing) {
+                transactionLatency.reset();
+                transactionLatency.setMarker(Marker.start);
+                write("Processing audio file: " + file.getAbsolutePath());
+                latch = new CountDownLatch(1);
+                streamAudioFile(file);
+                try {
+                    latch.await();	// Wait for audio file streaming to finish before placing a timer on the transaction response
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                wait4TerminateSignal(getTxnTimeout());
+            }
+        } else {
+            // Handle the case where dir is not really a directory.
+            // Checking dir.isDirectory() above would not be sufficient
+            // to avoid race conditions with another process that deletes
+            // directories.
+            File file = new File(path);
+            transactionLatency.reset();
+            transactionLatency.setMarker(Marker.start);
+            write("Processing audio file: " + file.getAbsolutePath());
+            latch = new CountDownLatch(1);
+            streamAudioFile(file);
+            try {
+                latch.await();	// Wait for audio file streaming to finish before placing a timer on the transaction response
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            wait4TerminateSignal(getTxnTimeout());
+        }
+
+        // Stop waiting for the socket connection to timeout after processing all audio files
+        connectionMonitorThread.interrupt();
+    }
+
+    public void sendNluTextRequest(String message) {
+        this.initialize();
+        _message = message;
+
+        transactionLatency.reset();
+        transactionLatency.setMarker(Marker.start);
+        sendNluTextQueryCommands();
+        sendTerminatingChunk(out, boundary);
+        transactionLatency.setMarker(Marker.query_complete);
+        wait4TerminateSignal(getTxnTimeout());
+
+    }
+
+    public void batchModeText(String filename) {
+
+        File file = new File(filename);
+
+        // Read the file provided and process each line
+        try {
+            FileInputStream stream = new FileInputStream(file);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+
+            String line = null;
+            int count = 1;
+            while ((line = reader.readLine()) != null) {
+                if( line.trim().length() == 0 ) continue;
+                write("[row " + count++ + "] : " + line);
+                sendNluTextRequest(line);
+            }
+            stream.close();
+            if( (count - 1) == 0 )
+                write("Empty file!");
+
+        }
+        catch (FileNotFoundException e) {
+            write("File not found. [" + file.toString() + "]");
+            return;
+        }
+        catch (IOException e) {
+            write("IOException [" + e.getMessage() + "]");
+            return;
+        }
+    }
+
+    public void resetUserProfile() {
+        this.initialize();
+
+        transactionLatency.setMarker(Marker.start);
+
+        /** Create a secure socket */
+        Socket s = connectToServer();
+
+        /** Send headers... */
+        transactionLatency.setMarker(Marker.query_begin);
+
+        /** Send the NCS Command request data */
+        sendUserProfileResetRequestData(out, boundary);
+
+        sendTerminatingChunk(out, boundary);
+        transactionLatency.setMarker(Marker.query_complete);
+
+        try {
+            BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+            String t;
+
+            while((t = br.readLine()) != null) {
+                write(t);
+
+                if( t.equals("0") )
+                    return;
+            }
+        } catch(Exception e) {
+            write(e.getMessage());
+
+        }
+    }
+
+    // ********************* STATIC COMMAND LINE OPTIONS METHODS *********************
+
+    /**
+     * Prints the usage
+     */
+    public static void printUsage(){
+
+        String path = HttpAsrClient.class.getProtectionDomain().getCodeSource().getLocation().getFile();
+        File f = new File(path);
+        String jar = f.getName();
+
+        System.out.println("\n" +
+                "Usage: java -jar " + jar + " -h host -n your_maid -a your_128_byte_string_app_key [OPTIONS]\n" +
+                "\n" +
+                "Required options:\n" +
+                "\t-h host \n" +
+                "\t-n nmaid \n" +
+                "\t-a appkey \n" +
+                "\n" +
+                "Optional inputs:\n" +
+                "\t-help (display this usage information)\n" +
+                "\t-p port (default is 443)\n" +
+                "\t-s use tls (default is true. specify false to disable tls)\n" +
+                "\t-tr require trusted root certificate chain (default is true. specify false to not require a trusted root certificate chain.)\n" +
+                "\t-t topic (default is nma_dm_main)\n" +
+                "\t-l language code (default is eng-USA)\n" +
+                "\t-c codec (default is PCM_16_16K)\n" +
+                "\t-f audio file (only required if not using batch mode or console input)\n" +
+                "\t-streaming enable/disable word-by-word streaming (default is true (enabled). specify false to disable. NOTE: requires special server-side configuration)\n" +
+                "\t-pf enable/disable profanity filtering (default is false (disabled). specify true to enable. NOTE: requires special server-side configuration)\n" +
+                "\t-nlu enable/disable Dragon NLU (default is true (enabled). specify false to disable and just do ASR. NOTE: requires special server-side configuration)\n" +
+                "\t-app specify the NCS Ref NLU application name (default is full.6.2. Specify a pre-configured NLU profile application name. NOTE: requires special server-side configuration)\n" +
+                "\t-sap saved audio path (default is present working directory. Specify a path to save captured audio to)\n" +
+                "\t-bm batch mode (default is false. specify path to audio files to enable batch mode. NOTE: batch mode takes precedence over the -f option)\n" +
+                "\t-text-string specify NLU text string to use instead of audio. NOTE: this flag takes precedence over any arguments related to audio and implies an NLU request.\n" +
+                "\t-text-strings specify file containing text strings to use instead of audio. Each query to be interpreted is on it's own line. NOTE: this flag takes precedence over any arguments related to audio and implies an NLU request.\n" +
+                "\t-vad voice activity detection (default is true. specify false to disable speech detection)\n" +
+                "\t-rup reset user profile (specify this flag to reset the user's acoustic and language model profiles on the server)\n" +
+                "\t-v verbose (default is false. specify true to increase verbosity level)\n");
+    }
+
+    /**
+     * Supported command-line parameters:
+     * -h host
+     * -p port
+     * -s use tls
+     * -n nmaid
+     * -a appkey
+     * -t topic
+     * -l language code
+     * -c codec
+     * -f audio file
+     * -streaming
+     * -pf profanity filtering
+     * -nlu dragon nlu
+     * -app nlu application name
+     * -sap saved audio path
+     * -bm batch mode
+     * -vad voice activity detection
+     * -rup reset user profile
+     *
+     * @param args
+     * @throws Exception
+     */
+    public static void main(String[] args) throws Exception {
+
+        String host = "{Provide your hostname}";
+        String nmaid = "{Provide your NMAID}";
+        String appKey = "{Provide your 128-byte String App Key}";
+
+        /** DEFAULTS */
+        int port = 443;
+        boolean useTLS = true;
+        boolean requireTrustedRootCert = true;
+        String topic = "nma_dm_main";
+        String langCode = "eng-USA";
+        String codec = Codec.PCM_16_16K;
+        String audioPath = null;	//"audio/quickfox.pcm";  // Default audio file.
+        boolean streamingResults = true;
+        boolean enableProfanityFiltering = false;
+        boolean enableNLU = true;
+        String savedAudioPath = null;
+        boolean batchMode = false;
+        boolean enableVAD = true;
+        boolean resetUserProfile = false;
+        String application = null;
+        String nluTextStrings = null;
+        String nluTextString = null;
+        boolean verbose = false;
+
+        for( int i = 0; i < args.length; i=i+2) {
+            if( args[i].equals("-help") ) {
+                printUsage();
+                return;
+            }
+            else if( args[i].equals("-h") )
+                host = args[i+1];
+            else if( args[i].equals("-p") )
+                port = Integer.parseInt(args[i+1]);
+            else if( args[i].equals("-s") )
+                useTLS = Boolean.parseBoolean(args[i+1]);
+            else if( args[i].equals("-tr") )
+                requireTrustedRootCert = Boolean.parseBoolean(args[i+1]);
+            else if( args[i].equals("-n") )
+                nmaid = args[i+1];
+            else if( args[i].equals("-a") )
+                appKey = args[i+1];
+            else if( args[i].equals("-t") )
+                topic = args[i+1];
+            else if( args[i].equals("-l") )
+                langCode = args[i+1];
+            else if( args[i].equals("-c") )
+                codec = args[i+1];
+            else if( args[i].equals("-f") )
+                audioPath = args[i+1];
+            else if( args[i].equals("-streaming") )
+                streamingResults = Boolean.parseBoolean(args[i+1]);
+            else if( args[i].equals("-pf") )
+                enableProfanityFiltering = Boolean.parseBoolean(args[i+1]);
+            else if( args[i].equals("-nlu") )
+                enableNLU = Boolean.parseBoolean(args[i+1]);
+            else if( args[i].equalsIgnoreCase("-app") )
+                application = args[i+1];
+            else if( args[i].equalsIgnoreCase("-sap") )
+                savedAudioPath = args[i+1];
+            else if( args[i].equalsIgnoreCase("-bm") ) {
+                batchMode = true;
+                audioPath = args[i+1];
+            }
+            else if( args[i].equalsIgnoreCase("-vad") )
+                enableVAD = Boolean.parseBoolean(args[i+1]);
+            else if( args[i].equalsIgnoreCase("-rup") ) {
+                resetUserProfile = true;
+            }
+            else if( args[i].equalsIgnoreCase("-text-string") ) {
+                nluTextString = args[i+1];
+            }
+            else if( args[i].equalsIgnoreCase("-text-strings") ) {
+                nluTextStrings = args[i+1];
+            }
+            else if( args[i].equalsIgnoreCase("-v") )
+                verbose = Boolean.parseBoolean(args[i+1]);
+            else
+                continue;
+        }
+
+        if( host.equalsIgnoreCase("{Provide your hostname}") ||
+                nmaid.equalsIgnoreCase("{Provide your NMAID}") ||
+                appKey.equalsIgnoreCase("{Provide your 128-byte String App Key}") ||
+                host.length() == 0 ||
+                nmaid.length() == 0 ||
+                appKey.length() != 128 ) {
+            printUsage();
+            System.exit(0);
+        }
+
+        IHttpAsrClient asrClient = new HttpAsrClient(
+                host,
+                port,
+                useTLS,
+                nmaid,
+                appKey,
+                topic,
+                langCode );
+
+        if( verbose ) asrClient.enableVerbose();
+
+        if( !requireTrustedRootCert )
+            asrClient.disableTrustedRootCert();
+
+        // Reset User Profile requests take precedence over any other conflicting command-line args
+        if( resetUserProfile ) {
+            asrClient.resetUserProfile();
+            System.exit(0);
+        }
+
+        if( batchMode )
+            asrClient.enableBatchMode();
+
+        if( savedAudioPath != null )
+            asrClient.setSavedAudioPath(savedAudioPath);
+
+        if( !enableVAD )
+            asrClient.disableStartOfSpeechDetection();
+
+        if( enableProfanityFiltering )	// profanity filtering is disabled by default
+            asrClient.enableProfanityFiltering();
+
+        if( !enableNLU )	// NLU is enabled by default
+            asrClient.disableNLU();
+
+        if( application != null && !application.isEmpty() )	// default application is full.6.2 which likely won't work since customer-specific provisioning is necessary :)
+            asrClient.setApplication(application);
+
+        // Command-line args indicating NLU Text mode take precedence over args for Audio
+        if( nluTextString != null ) {
+            asrClient.enableTextNLU();
+            asrClient.sendNluTextRequest(nluTextString);
+            System.exit(0);
+        }
+        if( nluTextStrings != null ) {
+            asrClient.enableBatchMode();
+            asrClient.enableTextNLU();
+            asrClient.batchModeText(nluTextStrings);
+            System.exit(0);
+        }
+
+        asrClient.start(audioPath, codec, streamingResults);
+
+    }
+
+}
