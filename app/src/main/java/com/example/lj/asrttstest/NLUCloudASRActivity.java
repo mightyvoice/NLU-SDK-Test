@@ -395,8 +395,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     }
 
     /**
-     * Start adk subdialog.
-     *
+     * Upload data to server by choosing the ID for disambiguation
      * @param mAdkSubdialogListener the listener
      */
     public void startAdkSubdialog(Transaction.Listener mAdkSubdialogListener) {
@@ -487,7 +486,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 
     /**
      * Creates the command settings.
-     *
      * @param commandName the command name
      * @param type the dictation type
      * @param language the dictation language
@@ -526,8 +524,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     }
 
     /**
-     * On get data result.
-     *
+     * Process the returned json each time
      * @param result the result
      */
     private void onGetDataResult(JSONObject result) {
@@ -597,11 +594,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Gets the device's time zone.
-     *
-     * @return the time zone
-     */
     protected String getTimeZone() {
         TimeZone tz = TimeZone.getDefault();
 
@@ -609,11 +601,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return tz.getID();	//tz.getDisplayName();
     }
 
-    /**
-     * Gets the current time.
-     *
-     * @return the current time
-     */
     protected String getCurrentTime() {
         String format = "yyyy-MM-dd'T'HH:mm:ssZ";
 
@@ -629,11 +616,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return dateFormat.format(date);
     }
 
-    /**
-     * Gets the dictation language.
-     *
-     * @return the dictation language
-     */
     protected String getLanguage() {
         if( mLanguage != null )
             return mLanguage;
@@ -641,12 +623,17 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return DEFAULT_LANGUAGE;
     }
 
-    /**
-     * Sets the dictation language.
-     *
-     * @param language the new dictation language
-     */
     void setLanguage(String language) {
         mLanguage = language;
     }
+
+
+
+
+
+
+
+
+
+
 }
