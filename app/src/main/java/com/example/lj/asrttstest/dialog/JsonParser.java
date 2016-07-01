@@ -22,8 +22,11 @@ public class JsonParser extends BaseDialogManager{
     public String textForTTS;
     public String textForDisplay;
 
+    private boolean reset;
+
     public JsonParser(JSONObject input){
         processServerResponse(input);
+        getResetValue();
         Log.d("haha", "##############################\n"+
                 "Dialog Phase: " + getDialogPhase()+"\n"+
                 "Domain: " + getDomain()+"\n"+
@@ -32,7 +35,33 @@ public class JsonParser extends BaseDialogManager{
                 "Status: " + getStatus()+"\n"+
                 "System Text: " + getSystemText()+"\n"+
                 "TTS Text: " + getTtsText() + "\n"+
+                "If reset: " + getReset() + "\n" +
                 "##############################"
         );
+    }
+
+    public void setReset(boolean _reset){
+        reset = _reset;
+    }
+
+    public boolean getReset(){
+        return reset;
+    }
+
+    private void getResetValue(){
+        reset = false;
+        JSONArray curArray = getActions();
+        for(int i = 0; i < curArray.length(); i++) {
+            JSONObject curObject = curArray.optJSONObject(i);
+            curObject = curObject.optJSONObject("value");
+            if (curObject.has("type")) {
+                curObject = curObject.optJSONObject("type");
+                String type = curObject.optString("value");
+                if (type.equals("reset")) {
+                    reset = true;
+                    return;
+                }
+            }
+        }
     }
 }
