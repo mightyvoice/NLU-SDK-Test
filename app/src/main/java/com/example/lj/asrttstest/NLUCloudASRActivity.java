@@ -481,16 +481,24 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         }
         else {
             command = getAppserverCommand(); // "...APPSERVER_CMD";
+
             appDataDict.put("message", message);
+            //Ji's code
+            settings.put("audio_source", "UnknownInputSource");
+//            command = "NVC_APPSERVER_CMD";
         }
 
         RecogSpec recogSpec = new RecogSpec(command, settings, "AUDIO_INFO");
 
+        //Ji's code
+//        RecogSpec recogSpec = new RecogSpec(command, settings, "CONNECTION_INFO");
+
         // Start creating REQUEST_INFO dictionary
         requestInfo.put("start", 0);
         requestInfo.put("end", 0);
-        if(message == null) requestInfo.put("text", "");
-        else requestInfo.put("text", message);
+        requestInfo.put("text", "");
+        //this line is Ji's code
+        requestInfo.put("nbest_text_results", 1);
 
         // If this request is a DRAGON_NLU... request, create the appserver_data dictionary...
         if (isNluEnabled()) {
@@ -501,16 +509,18 @@ public class NLUCloudASRActivity extends AppCompatActivity {
             appDataDict.put("nlps_use_adk", 1);
 
             //this line is Ji's code
-//            appDataDict.put("nlps_return_abstract_nlu", 1);
+            appDataDict.put("nlps_return_abstract_nlu", 1);
 
             requestInfo.put("appserver_data", appDataDict);
             requestInfo.put("nlsml_results", 1);
 
-            //this line is Ji's code
-//            requestInfo.put("nbest_text_results", 1);
         }
 
         recogSpec.addParam(new DictionaryParam("REQUEST_INFO", requestInfo));
+        //Ji's part
+        settings.put("command", "NVC_APPSERVER_CMD");
+        recogSpec.addParam(new DictionaryParam("CONNECTION_INFO", settings));
+
 
         Log.d(TAG, "command: " + command);
         Log.d(TAG, "settings: " + settings.toString());
