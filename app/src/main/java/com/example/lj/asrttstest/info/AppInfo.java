@@ -14,7 +14,7 @@ public class AppInfo {
 
 //    //////////Settings for TTS
 //    //// it seems that it works for ASR and NLU
-    public static final String Host = "mtldev02.nuance.com";
+    public static final String Host = "mtldev08.nuance.com";
     public static final int Port = 443;
     public static final String AppId = "NMT_EVAL_TCL_20150814";
     public static final byte[] AppKey = { (byte) 0x89, (byte) 0xe9,
@@ -53,30 +53,6 @@ public class AppInfo {
 
     public static String IMEInumber;
     public static String applicationSessionID;
-
-    public static String mixApplicationSessionID;
-
-    public static final String mixHost = "nmsp.dev.nuance.com";
-    public static final int mixPort = 443;
-    public static final String mixAppId = "HTTP_NMDPPRODUCTION_Ziju_Feng_Personal_Assistant_20160617144319";
-    public static final byte[] mixAppKey = {
-            (byte)0xeb, (byte)0xa5, (byte)0xa8,
-            (byte)0xbb, (byte)0x57, (byte)0xe5, (byte)0xa0,
-            (byte)0x11, (byte)0xe3, (byte)0x2e, (byte)0xb0,
-            (byte)0x80, (byte)0x35, (byte)0x3b, (byte)0x32,
-            (byte)0x72, (byte)0xbf, (byte)0xfc, (byte)0x53,
-            (byte)0x49, (byte)0x99, (byte)0x3a, (byte)0xf3,
-            (byte)0x07, (byte)0x8f, (byte)0x24, (byte)0xc5,
-            (byte)0xb8, (byte)0x58, (byte)0x00, (byte)0xa7,
-            (byte)0x44, (byte)0xa6, (byte)0x4f, (byte)0xff,
-            (byte)0xfd, (byte)0x35, (byte)0xa0, (byte)0x0f,
-            (byte)0x18, (byte)0xce, (byte)0xbf, (byte)0x99,
-            (byte)0x03, (byte)0xfb, (byte)0xcb, (byte)0x76,
-            (byte)0xba, (byte)0xc7, (byte)0xc9, (byte)0x03,
-            (byte)0x60, (byte)0x03, (byte)0xf6, (byte)0x68,
-            (byte)0x92, (byte)0x1a, (byte)0x2d, (byte)0x4a,
-            (byte)0x72, (byte)0x2e, (byte)0xf2, (byte)0xb6,
-            (byte)0xd4};
 
     private static byte[] toByteArray(String appKey)
     {

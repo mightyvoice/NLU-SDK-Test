@@ -151,14 +151,18 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     /** The default NCS NLU App Server command. Default is DRAGON_NLU_APPSERVER_CMD. */
     private static final String DEFAULT_APPSERVER_COMMAND = "DRAGON_NLU_APPSERVER_CMD";
 
+    private Button startRecognitionButton;
+    private Button cancelButton;
+    private Button stopRecognitionButton;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_cloud_asr);
         resultEditText = (TextView) findViewById(R.id.cloudResultEditText);
-        final Button startRecognitionButton = (Button) findViewById(R.id.startCloudRecognitionButton);
-        final Button stopRecognitionButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
-        final Button cancelButton = (Button) findViewById(R.id.cancelCloudRecognitionButton);
+        startRecognitionButton = (Button) findViewById(R.id.startCloudRecognitionButton);
+        stopRecognitionButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
+        cancelButton = (Button) findViewById(R.id.cancelCloudRecognitionButton);
         final Spinner resultModeSpinner = (Spinner) findViewById(R.id.resultModeSpinner);
 
         startRecognitionButton.setEnabled(false);
@@ -408,6 +412,9 @@ public class NLUCloudASRActivity extends AppCompatActivity {
             Log.d("sss", resultToShow);
             sendJsonToEmail(resultToShow);
 //            onGetDataResult(jsonResult);
+            startRecognitionButton.setEnabled(true);
+            stopRecognitionButton.setEnabled(false);
+            cancelButton.setEnabled(false);
         }
 
         @Override
@@ -415,6 +422,9 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 //            onRecognitionError(error.toJSON());
             Log.d("sss", intToString(error.getType()));
             Log.d("sss", intToString(error.getTransactionError().getType()));
+            startRecognitionButton.setEnabled(true);
+            stopRecognitionButton.setEnabled(false);
+            cancelButton.setEnabled(false);
         }
     };
 
@@ -425,8 +435,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 
     private void startTextRecognition(String text) {
         Log.d(TAG, "startTextRecognition: " + text);
-//        RecogSpec recogSpec = createRecogSpec(getDictationType(), getLanguage(), "TCL", text, null);
-//        mCloudTextRecognizer.startRecognition(recogSpec, recognizerTextListener);
+        RecogSpec recogSpec = createTextRecogSpec(getDictationType(), getLanguage(), "TCL", text, null);
+        mCloudTextRecognizer.startRecognition(recogSpec, recognizerTextListener);
 //        textRecognition(text);
     }
 
@@ -444,7 +454,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
      * @param serverSpecifiedSettings the server specified settings
      * @return the recognition spec
      */
-    private RecogSpec createRecogSpec(String type, String language, String nluProfile, String message, Data.Dictionary serverSpecifiedSettings) {
+    private RecogSpec createTextRecogSpec(String type, String language, String nluProfile, String message, Data.Dictionary serverSpecifiedSettings) {
 
         String command;
         Data.Dictionary settings = new Data.Dictionary();
@@ -491,13 +501,13 @@ public class NLUCloudASRActivity extends AppCompatActivity {
             appDataDict.put("nlps_use_adk", 1);
 
             //this line is Ji's code
-            appDataDict.put("nlps_return_abstract_nlu", 1);
+//            appDataDict.put("nlps_return_abstract_nlu", 1);
 
             requestInfo.put("appserver_data", appDataDict);
             requestInfo.put("nlsml_results", 1);
 
             //this line is Ji's code
-            requestInfo.put("nbest_text_results", 1);
+//            requestInfo.put("nbest_text_results", 1);
         }
 
         recogSpec.addParam(new DictionaryParam("REQUEST_INFO", requestInfo));
