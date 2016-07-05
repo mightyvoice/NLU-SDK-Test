@@ -1,9 +1,8 @@
 package com.example.lj.asrttstest.asr.text;
 
 /**
- * Created by lj on 16/6/30.
+ * Created by lj on 16/7/5.
  */
-
 public class Codec {
     public static final String PCM_16_8K = "PCM_16_8K";
     public static final String PCM_16_16K = "PCM_16_16K";
@@ -14,4 +13,3 @@ public class Codec {
     public static final String AMR_07 = "AMR_07";
     public static final String MP3 = "MP3";
 }
-

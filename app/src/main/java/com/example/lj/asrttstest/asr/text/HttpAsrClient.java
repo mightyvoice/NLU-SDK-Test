@@ -14,21 +14,15 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 
 
 //import javax.sound.sampled.AudioFormat;
@@ -39,17 +33,7 @@ import java.util.concurrent.CountDownLatch;
 
 //import org.apache.commons.collections4.queue.CircularFifoQueue;
 
-import com.example.lj.asrttstest.asr.text.AudioChopper;
-import com.example.lj.asrttstest.asr.text.AudioChopperFactory;
-import com.example.lj.asrttstest.asr.text.Chunk;
-import com.example.lj.asrttstest.asr.text.Codec;
-import com.example.lj.asrttstest.asr.text.FileLoader;
-import com.example.lj.asrttstest.asr.text.LatencyMonitor;
-import com.example.lj.asrttstest.asr.text.ResponseParser;
-import com.example.lj.asrttstest.asr.text.SocketFactory;
 import com.example.lj.asrttstest.asr.text.LatencyMonitor.Marker;
-import com.example.lj.asrttstest.asr.text.LogData;
-import com.example.lj.asrttstest.asr.text.UserIDManager;
 import com.example.lj.asrttstest.info.AppInfo;
 
 public class HttpAsrClient implements IHttpAsrClient {
@@ -171,7 +155,7 @@ public class HttpAsrClient implements IHttpAsrClient {
         }
 
         public String initApplicationSessionID() {
-            _applicationSessionID = java.util.UUID.randomUUID().toString();
+            _applicationSessionID = AppInfo.applicationSessionID;
 
             return _applicationSessionID;
         }
@@ -1084,7 +1068,10 @@ public class HttpAsrClient implements IHttpAsrClient {
      *
      */
     protected void initialize() {
-        _userID = UserIDManager.createUserIDManager().initUserID();
+//        _userID = UserIDManager.createUserIDManager().initUserID();
+//        _requestData.initApplicationSessionID();
+//        _requestData.resetUtteranceNumber();
+        _userID = AppInfo.IMEInumber;
         _requestData.initApplicationSessionID();
         _requestData.resetUtteranceNumber();
     }

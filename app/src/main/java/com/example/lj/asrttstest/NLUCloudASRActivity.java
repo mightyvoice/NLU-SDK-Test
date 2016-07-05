@@ -72,11 +72,6 @@ import com.nuance.dragon.toolkit.util.WorkerThread;
 //import com.nuance.dragon.toolkit.oem.api.WorkerThread;
 import com.nuance.dragon.toolkit.data.Data;
 import com.nuance.dragon.toolkit.data.Data.Dictionary;
-//import com.nuance.http_2_0.ncsref.nlu.HttpAsrClient;
-//import com.nuance.http_2_0.ncsref.nlu.IHttpAsrClient;
-//import com.nuance.samples.util.audio.Codec;
-//import com.nuance.dragon.toolkit.core.data.Data;
-//import com.nuance.dragon.toolkit.core.data.Data.Dictionary;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -582,84 +577,5 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     String getAppserverCommand() {
         return DEFAULT_APPSERVER_COMMAND;
     }
-
-//    private void textRecognition(String text){
-//        String host = "mtldev08.nuance.com";
-//        String nmaid = "NMT_EVAL_TCL_20150814";
-//        String appKey = "89e9b1b619dfc7d682237e701da7ada48316f675f73c5ecd23a41fc40782bc212ed3562022c23e75214dcb9010286c23afe100e00d4464873e004d1f4c8a5883";
-//        /** DEFAULTS */
-//        int port = 443;
-//        boolean useTLS = true;
-//        boolean requireTrustedRootCert = false;
-//        String topic = "nma_dm_main";
-//        String langCode = "eng-USA";
-//        String codec = Codec.PCM_16_16K;
-//        String audioPath = null;	//"audio/quickfox.pcm";  // Default audio file.
-//        boolean streamingResults = true;
-//        boolean enableProfanityFiltering = false;
-//        boolean enableNLU = true;
-//        String savedAudioPath = null;
-//        boolean batchMode = false;
-//        boolean enableVAD = true;
-//        boolean resetUserProfile = false;
-//        String application = "TCL";
-//        String nluTextStrings = null;
-//        String nluTextString = text;
-//        boolean verbose = false;
-//
-//        IHttpAsrClient asrClient = new HttpAsrClient(
-//                host,
-//                port,
-//                useTLS,
-//                nmaid,
-//                appKey,
-//                topic,
-//                langCode );
-//
-//        if( verbose ) asrClient.enableVerbose();
-//
-//        if( !requireTrustedRootCert )
-//            asrClient.disableTrustedRootCert();
-//
-//        // Reset User Profile requests take precedence over any other conflicting command-line args
-//        if( resetUserProfile ) {
-//            asrClient.resetUserProfile();
-//            System.exit(0);
-//        }
-//
-//        if( batchMode )
-//            asrClient.enableBatchMode();
-//
-//        if( savedAudioPath != null )
-//            asrClient.setSavedAudioPath(savedAudioPath);
-//
-//        if( !enableVAD )
-//            asrClient.disableStartOfSpeechDetection();
-//
-//        if( enableProfanityFiltering )	// profanity filtering is disabled by default
-//            asrClient.enableProfanityFiltering();
-//
-//        if( !enableNLU )	// NLU is enabled by default
-//            asrClient.disableNLU();
-//
-//        if( application != null && !application.isEmpty() )	// default application is full.6.2 which likely won't work since customer-specific provisioning is necessary :)
-//            asrClient.setApplication(application);
-//
-//        // Command-line args indicating NLU Text mode take precedence over args for Audio
-//        if( nluTextString != null ) {
-//            asrClient.enableTextNLU();
-//            asrClient.sendNluTextRequest(nluTextString);
-//            System.exit(0);
-//        }
-//        if( nluTextStrings != null ) {
-//            asrClient.enableBatchMode();
-//            asrClient.enableTextNLU();
-//            asrClient.batchModeText(nluTextStrings);
-//            System.exit(0);
-//        }
-//
-//        asrClient.start(audioPath, codec, streamingResults);
-//    }
-
 
 }
