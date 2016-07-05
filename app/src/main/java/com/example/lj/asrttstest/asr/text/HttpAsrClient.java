@@ -29,12 +29,13 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.TargetDataLine;
-import org.apache.commons.collections4.queue.CircularFifoQueue;
+//import javax.sound.sampled.AudioFormat;
+//import javax.sound.sampled.AudioSystem;
+//import javax.sound.sampled.DataLine;
+//import javax.sound.sampled.LineUnavailableException;
+//import javax.sound.sampled.TargetDataLine;
+
+//import org.apache.commons.collections4.queue.CircularFifoQueue;
 
 import com.example.lj.asrttstest.asr.text.AudioChopper;
 import com.example.lj.asrttstest.asr.text.AudioChopperFactory;
@@ -47,41 +48,9 @@ import com.example.lj.asrttstest.asr.text.SocketFactory;
 import com.example.lj.asrttstest.asr.text.LatencyMonitor.Marker;
 import com.example.lj.asrttstest.asr.text.LogData;
 import com.example.lj.asrttstest.asr.text.UserIDManager;
+import com.example.lj.asrttstest.info.AppInfo;
 
 public class HttpAsrClient implements IHttpAsrClient {
-
-    class AudioPacket {
-        byte audio[];
-        int size = 0;
-
-        float energyLevel = 0.0F;
-        float meanEnergyLevel = 0.0F;
-        double SNR = 0.0;
-        double rmsDiff = 0.0;
-        int frameTime = 0;
-
-        AudioFormat format = null;
-
-        public AudioPacket(AudioFormat format, byte buf[], int len) {
-            this.format = format;
-            audio = buf;
-            size = len;
-        }
-    }
-
-    // ********************* CONSTANTS *********************
-    /** The Constant MAX_8_BITS_SIGNED. Used in the algorithm to detect audio energy level. */
-    final static float MAX_8_BITS_SIGNED = Byte.MAX_VALUE;
-
-    /** The Constant MAX_8_BITS_UNSIGNED. Used in the algorithm to detect audio energy level. */
-    final static float MAX_8_BITS_UNSIGNED = 0xff;
-
-    /** The Constant MAX_16_BITS_SIGNED. Used in the algorithm to detect audio energy level. */
-    final static float MAX_16_BITS_SIGNED = Short.MAX_VALUE;
-
-    /** The Constant MAX_16_BITS_UNSIGNED. Used in the algorithm to detect audio energy level. */
-    final static float MAX_16_BITS_UNSIGNED = 0xffff;
-
 
     // ********************* PRIVATE FIELDS *********************
 
@@ -122,28 +91,13 @@ public class HttpAsrClient implements IHttpAsrClient {
     /** The text to pass in for NLU interpretation */
     private String _message = null;
 
-    /** The built-in speaker data line that audio will be read from. */
-    private TargetDataLine line = null;
-
-    /** Flag to track if the user requested to stop a transaction. */
-    private boolean stopRequested = false;
-
     // ********************* PROTECTED FIELDS *********************
 
     /** Flag to track if batch mode is enabled. Default is false. */
     protected boolean batchMode = false;
 
-    /** Flag to track whether or not to use start of speech detection */
-    protected boolean startOfSpeechDetectionEnabled = true;
-
     /** Enable/Disable console output logging level. Default is false. Enable for debugging. */
     protected boolean verbose = false;
-
-    /** Flag to track whether the client is actively capturing audio. */
-    protected volatile boolean listening = false;
-
-    /** The path to use for either saving audio (e.g. when capturing audio from the built-in speaker) or reading audio (e.g. when in batch mode). */
-    protected volatile String audioPath = null;
 
     /** The socket connection to the HTTP service */
     private volatile Socket s = null;
@@ -160,9 +114,6 @@ public class HttpAsrClient implements IHttpAsrClient {
     /** Flag to track if query has failed */
     protected volatile boolean queryFailed = false;
 
-    /** Flag to track if query was cancelled by user */
-    protected volatile boolean queryCancelled = false;
-
     /** An instance of the LatencyMonitor class. */
     protected LatencyMonitor transactionLatency = new LatencyMonitor();
 
@@ -174,12 +125,6 @@ public class HttpAsrClient implements IHttpAsrClient {
 
     /** The client-side transaction timeout. Default is 5000ms. */
     protected int txnTimeout = 5000;
-
-    private static Object recorderWaitLock = new Object();
-    protected int recorderTimeout = 6000;
-
-    /** A synchronization object to wait for audio file streaming to complete. */
-    private CountDownLatch latch;
 
     /**
      * Request Data parameters are passed in with every NCS transaction request. Many of these parameters are used for
@@ -305,45 +250,6 @@ public class HttpAsrClient implements IHttpAsrClient {
     }
 
     /**
-     * Sets the saved audio path.
-     *
-     * @param val the new saved audio path
-     */
-    public void setSavedAudioPath(String val) {
-        audioPath = val;
-    }
-
-    /**
-     * Gets the saved audio path.
-     *
-     * @return the saved audio path
-     */
-    public String getSavedAudioPath() {
-        return audioPath;
-    }
-
-    /**
-     * Enable start of speech detection
-     */
-    public void enableStartOfSpeechDetection() {
-        startOfSpeechDetectionEnabled = true;
-    }
-
-    /**
-     * Disable start of speech detection
-     */
-    public void disableStartOfSpeechDetection() {
-        startOfSpeechDetectionEnabled = false;
-    }
-
-    /**
-     * Check if start of speech detection is enabled
-     */
-    public boolean isStartOfSpeechDetectionEnabled() {
-        return startOfSpeechDetectionEnabled;
-    }
-
-    /**
      * Enable profanity filtering
      */
     public void enableProfanityFiltering() {
@@ -463,627 +369,6 @@ public class HttpAsrClient implements IHttpAsrClient {
         return verbose;
     }
 
-    // ********************* CONSOLE EVENT HANDLERS *********************
-
-    /**
-     * Shutdown.
-     */
-    protected void shutdown() {
-        listening = false;
-        if( verbose ) write("shutting down...");
-        System.exit(0);
-    }
-
-    /**
-     * Toggle listening.
-     */
-    protected void toggleListening() {
-        if( listening )
-            stopListening();
-        else
-            startListening();
-    }
-
-    /**
-     * Start listening.
-     */
-    protected void startListening() {
-        transactionLatency.reset();
-        transactionLatency.setMarker(Marker.start);
-        connectToServer();
-        captureAudio();
-    }
-
-    /**
-     * Stop listening.
-     */
-    protected void stopListening() {
-        listening = false;
-        headersSent = false;
-
-        if (!stopRequested){
-            closeInputLine();
-        }
-    }
-
-    /**
-     * Close input line.
-     *
-     * If the built-in speaker data line is active and open, calling closeInputLine() will properly close the line.
-     */
-    private void closeInputLine() {
-        stopRequested = true;
-
-        if( line.isActive() || line.isRunning() )
-            line.stop();
-
-        if( line.isOpen() )
-            line.close();
-    }
-
-    /**
-     * Monitor console events.
-     *
-     * <br><br>
-     * When not in batch mode, listen for console input from the user.
-     * <br>
-     * <ul>
-     * <li>Pressing &lt;enter&gt; will start/stop listening.</li>
-     * <li>Pressing 'q' &lt;enter&gt; will quit the app.</li>
-     * </ul>
-     */
-    public void monitorConsoleEvents() {
-        write("Press enter to start capturing audio. (q <enter> to quit)");
-
-        BufferedReader br= new BufferedReader(new InputStreamReader(System.in));
-        while(true){
-            String s = null;
-            try {
-                s = br.readLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if( s != null && s.equalsIgnoreCase("q") )
-                shutdown();	// Shutdown the app if the user presses 'q'
-            if( s != null && s.length() == 0) {
-                toggleListening();	// Toggle listening mode if the user has pressed <enter>
-            }
-        }
-    }
-
-
-
-    // ********************* AUDIO CAPTURE / STREAMING *********************
-
-    static class AudioAnalyzer {
-        static public AudioPacket analyze(AudioPacket sample) {
-
-            int max = 0;
-            float energyLevel = 0.0F;
-
-            AudioFormat format = sample.format;
-            int readPoint = 0;
-            byte[] buffer = sample.audio;
-            int size = sample.size;
-
-            boolean use16Bit = (format.getSampleSizeInBits() == 16);
-            boolean signed = (format.getEncoding() == AudioFormat.Encoding.PCM_SIGNED);
-            boolean bigEndian = (format.isBigEndian());
-
-            float sum = 0.0F;
-            int sampleSize = 0;
-            double[] array = new double[2048];
-
-            if (use16Bit) {
-                for (int i = readPoint; i < size; i += 2) {
-                    int value = 0;
-                    // deal with endianness
-                    int hiByte = (bigEndian ? buffer[i] : buffer[i+1]);
-                    int loByte = (bigEndian ? buffer[i+1] : buffer [i]);
-                    if (signed) {
-                        short shortVal = (short) hiByte;
-                        shortVal = (short) ((shortVal << 8) | (byte) loByte);
-                        value = shortVal;
-                    } else {
-                        value = (hiByte << 8) | loByte;
-                    }
-                    max = Math.max(max, value);
-
-                    sum += value;
-                    array[sampleSize] = value;
-                    sampleSize += 1;
-
-                } // for
-            } else {
-                // 8 bit - no endianness issues, just sign
-                for (int i = readPoint; i < size; i++) {
-                    int value = 0;
-                    if (signed) {
-                        value = buffer [i];
-                    } else {
-                        short shortVal = 0;
-                        shortVal = (short) (shortVal | buffer [i]);
-                        value = shortVal;
-                    }
-                    max = Math.max (max, value);
-
-                    sum += value;
-                    array[sampleSize] = value;
-                    sampleSize += 1;
-
-                } // for
-            } // 8 bit
-            // express max as float of 0.0 to 1.0 of max value
-            // of 8 or 16 bits (signed or unsigned)
-            if (signed) {
-                if (use16Bit) { energyLevel = (float) max / MAX_16_BITS_SIGNED; }
-                else { energyLevel = (float) max / MAX_8_BITS_SIGNED; }
-            } else {
-                if (use16Bit) { energyLevel = (float) max / MAX_16_BITS_UNSIGNED; }
-                else { energyLevel = (float) max / MAX_8_BITS_UNSIGNED; }
-            }
-
-            sample.energyLevel = energyLevel;
-            sample.meanEnergyLevel = (sum / sampleSize) / ((signed) ? MAX_16_BITS_SIGNED : MAX_16_BITS_UNSIGNED);
-            sample.SNR = 20 * Math.log10(max);
-
-            return sample;
-        }
-    }
-
-    class SpeechDetectorSettings {
-        // Experiment with these parameters to find optimal performance for start of speech detection
-        //	The start of speech algorithm used in this sample app is very simple and not meant for production
-        //	To effectively disable start of speech detection, set audioEnergyThreshold to 0.0
-
-        int numPacketsToBufferStartOfSpeech = 7;		// Number of audio packets to buffer for start of speech detection
-        int numPacketsToBufferLeadingSilence = 12;		// Number of audio packets to buffer containing leading silence
-        float audioEnergyThreshold = ( isStartOfSpeechDetectionEnabled() ) ? 0.050F : 0.0F;
-        int endOfSpeechThreshold = 45;
-
-        double rmsDiffThreshold = 1.2;
-        double rmsAbsoluteThreshold = 600;
-
-    }
-
-    class SpeechDetectorContext {
-        SpeechDetectorSettings settings = new SpeechDetectorSettings();
-
-        boolean audioPacketHasSpeech = false;
-        boolean startOfSpeechDetected = false;
-        boolean endOfSpeechDetected = false;
-        int startOfSpeechThresholdCounter = 0;
-        int endOfSpeechThresholdCounter = 0;
-
-        CircularFifoQueue<AudioPacket> startOfSpeechQueue = new CircularFifoQueue<AudioPacket>(settings.numPacketsToBufferStartOfSpeech);	// Audio buffer to track start of speech detection
-        CircularFifoQueue<AudioPacket> leadingSilenceQueue = new CircularFifoQueue<AudioPacket>(settings.numPacketsToBufferLeadingSilence);	// Audio buffer to hold leading silence
-
-        AudioPacket lastAudioPacket = null;
-    }
-
-    /*
-     * This speech detector does some analysis on the pcm audio to calculate energy level, SNR, etc.
-     *
-     * It is very simple in that all it is evaluating is if a window of audio frames exceed a configured
-     * threshold value for energy level. This is not very robust, especially in noisy environments.
-     *
-     * Feel free to experiment to find a speech detection algorithm that works best for your solution. For
-     * example, leveraging the difference in mean energy level between the current and previous audio frames takes into account
-     * initial background noise and can be useful in noisier environments like the car.
-     *
-     */
-    protected SpeechDetectorContext speechDetector(AudioPacket audioPacket, SpeechDetectorContext c) {
-
-        // Get energy level of audio sample
-        audioPacket = AudioAnalyzer.analyze(audioPacket);
-        audioPacket.frameTime = (c.lastAudioPacket == null) ? 0 : c.lastAudioPacket.frameTime + 20;
-
-        if( c.lastAudioPacket != null ) {
-            audioPacket.rmsDiff = 20.0 * Math.log10(audioPacket.energyLevel / c.lastAudioPacket.energyLevel);
-        }
-        c.lastAudioPacket = audioPacket;
-
-        c.audioPacketHasSpeech = (audioPacket.energyLevel < c.settings.audioEnergyThreshold) ? false : true;
-
-        // Speech already detected. Just analyze audio and return...
-        if( c.startOfSpeechDetected ) {
-            if( c.audioPacketHasSpeech ) c.endOfSpeechThresholdCounter = 0;
-            else c.endOfSpeechThresholdCounter++;
-
-            c.endOfSpeechDetected = (c.endOfSpeechThresholdCounter == c.settings.endOfSpeechThreshold) ? true : false;
-
-            return c;
-        }
-
-        // Audio packet containing speech has been detected...
-        if( c.audioPacketHasSpeech )  {
-            // Start of speech has been detected - start sending NCS query commands and buffered audio to NCS cloud
-            if( ++c.startOfSpeechThresholdCounter == c.settings.numPacketsToBufferStartOfSpeech ) {
-                c.startOfSpeechDetected = true;
-
-            }	// Audio packet contains speech, but we haven't reached our threshold yet. Keep buffering...
-            else {
-                c.startOfSpeechDetected = false;
-            }
-
-            c.startOfSpeechQueue.add(audioPacket);
-
-        } // This audio packet is leading silence - buffer it
-        else {
-            c.startOfSpeechDetected = false;
-            c.leadingSilenceQueue.add(audioPacket);
-
-            // Reset start of speech counters and new buffer size
-            c.startOfSpeechQueue.clear();
-            c.startOfSpeechThresholdCounter = 0;
-        }
-
-        return c;
-    }
-
-    /*
-     * Always include a recording timeout in case end of speech detection fails or the user forgets to stop recording
-     */
-    boolean recorderTimedOut = false;
-    Thread recorderMonitorThread = null;
-    Runnable recordingTimeoutMonitor = new Runnable() {
-
-        @Override
-        public void run() {
-            recorderTimedOut = false;
-
-            synchronized(recorderWaitLock) {
-                try {
-                    write("Recording timer started...");
-                    recorderWaitLock.wait(recorderTimeout);
-
-                    if( listening ) {
-                        write( "Recording timed out!" );
-                        recorderTimedOut = true;
-                        stopListening();
-
-                    }
-                } catch( InterruptedException e ) {
-                    // Timer cancelled. Nothing to do...
-                    write("Recording monitor interrupted...");
-                }
-            }
-
-        }
-
-    };
-
-    /**
-     * Capture audio.
-     */
-    protected void captureAudio() {
-        try {
-
-            // Initialize audio format for built-in speaker data line
-            final AudioFormat format = getFormat();
-            DataLine.Info info = new DataLine.Info( TargetDataLine.class, format );
-            if( verbose ) write( "Audio Data line Info: " + info );
-
-            // Open and start capturing audio over the built-in speaker data line
-            line = (TargetDataLine) AudioSystem.getLine(info);
-            line.open(format);
-            line.start();
-
-            // Calculate audio buffer size for a 20ms frame ( 50 * 20ms = 1s )
-            //	Sanity Check: bufferSize should end up being 640 bytes for this sample app [ (16000Khz * 16bits) / 50 ]
-            final int bufferSize = (int) ((format.getSampleRate() * format.getFrameSize()) / 50);
-            write("bufferSize: " + bufferSize);
-
-            Runnable runner = new Runnable() {
-
-                public void run() {
-
-                    // app state is now in listening mode...
-                    listening = true;
-
-                    try {
-                        /** Save audio to file. If a folder was provided at the command line, use it. Otherwise, save to present working directory */
-                        File dir = ( audioPath == null) ? new File(".") : new File(audioPath);
-
-                        // Filename created is audio-{timestamp}.pcm
-                        long unixTime = System.currentTimeMillis() / 1000L;
-                        File fout = new File(dir.getCanonicalPath() + File.separator + "audio-" + unixTime + ".pcm");
-                        File fout2 = new File(dir.getCanonicalPath() + File.separator + "audio-" + unixTime + ".log");
-                        dir = new File(fout.getParent());
-                        if( verbose ) write("Writing to " + fout.getCanonicalPath());
-
-                        // Create path and file if they do not exist
-                        if( !fout.exists() ) {
-                            dir.mkdirs();
-                            fout.createNewFile();
-                            fout2.createNewFile();
-                        }
-
-                        String boundary = null;
-
-                        // Create the file output stream...
-                        OutputStream FileOutput = new FileOutputStream(fout);
-                        PrintWriter FileOutput2 = new PrintWriter(fout2);
-                        String separator = "\t";
-
-                        boolean queryCommandsSent = false;			// Only send NCS Query Commands once, after start of speech has been detected
-                        queryFailed = false;
-
-                        SpeechDetectorContext c = new SpeechDetectorContext();
-
-                        write("Listening...");
-
-                        if( recorderMonitorThread != null ) recorderMonitorThread.interrupt();
-                        recorderMonitorThread = new Thread(recordingTimeoutMonitor);
-                        recorderMonitorThread.start();
-
-                        while (listening && !queryFailed) {
-                            // Create and read in a 20ms frame of raw pcm audio
-                            byte buffer[] = new byte[bufferSize];
-                            int count = line.read(buffer, 0, buffer.length);
-
-                            if( count > 0 ) {
-                                //FileOutput.write( buffer, 0, count );	// for debug...
-
-                                // Analyze the audio
-                                c = speechDetector(new AudioPacket(format, buffer, buffer.length), c);
-
-                                String audioLogData = (c.lastAudioPacket.frameTime + separator +
-                                        c.audioPacketHasSpeech + separator +
-                                        String.format("%.2f", c.lastAudioPacket.SNR) + separator +
-                                        String.format("%.2f", c.lastAudioPacket.energyLevel * 100) + separator  +
-                                        String.format("%.2f", c.lastAudioPacket.rmsDiff) + separator +
-                                        String.format("%.5f", c.lastAudioPacket.meanEnergyLevel * 1000F));
-
-                                if( verbose ) write("[" + audioLogData + "] ");
-                                FileOutput2.println(audioLogData);
-
-                                if( c.startOfSpeechDetected ) {
-
-                                    if( queryCommandsSent) {
-                                        if( c.endOfSpeechDetected ) {
-                                            write( "End of speech detected!" );
-                                            stopListening();
-
-                                            synchronized(recorderWaitLock) {
-                                                try {
-                                                    recorderWaitLock.notifyAll();
-                                                } catch( IllegalMonitorStateException e ) {
-                                                    write( e.getMessage() );
-                                                }
-                                            }
-
-                                        }
-
-                                        ByteBuffer bbuf = ByteBuffer.wrap(buffer, 0, count);
-                                        sendAudioChunk(out, bbuf.array(), boundary);
-                                        FileOutput.write(buffer, 0, count);
-
-                                    } else {
-                                        write("Start of speech detected!");
-                                        recorderMonitorThread.interrupt();
-                                        recorderMonitorThread = new Thread(recordingTimeoutMonitor);
-                                        recorderMonitorThread.start();
-
-                                        write("Sending NCS Query commands...");
-                                        boundary = sendAsrQueryCommands();
-                                        queryCommandsSent = true;
-
-                                        transactionLatency.setMarker(Marker.audio_streaming_begin);
-
-                                        // Even better would be encoding the pcm as opus before sending it over the wire...
-
-                                        // Send the leading silence. NCS recognition performs better when there is some leading silence...
-                                        Iterator<AudioPacket> itr1 = c.leadingSilenceQueue.iterator();
-                                        while(itr1.hasNext()) {
-                                            AudioPacket packet = itr1.next();
-                                            FileOutput.write( packet.audio, 0, packet.size);
-                                            sendAudioChunk(out, ByteBuffer.wrap(packet.audio, 0, packet.size).array(), boundary);
-                                        }
-                                        // Send the buffered audio containing initial speech
-                                        Iterator<AudioPacket> itr2 = c.startOfSpeechQueue.iterator();
-                                        while(itr2.hasNext()){
-                                            AudioPacket packet = itr2.next();
-                                            FileOutput.write( packet.audio, 0, packet.size);
-                                            sendAudioChunk(out, ByteBuffer.wrap(packet.audio, 0, packet.size).array(), boundary);
-                                        }
-
-                                    }
-                                } else {
-                                    continue;
-                                }
-                            } // count > 0
-                        } // while listening
-
-                        if( recorderMonitorThread.isAlive() )
-                            recorderMonitorThread.interrupt();
-
-                        if (!stopRequested) closeInputLine();
-                        stopRequested = false;
-
-                        write("Done listening");
-                        if( verbose ) write("Done saving audio to file");
-                        FileOutput.close();
-                        FileOutput2.close();
-
-                        if(!queryCommandsSent) {
-                            fout.delete();	// Don't bother keeping the audio file...
-                            write("No speech detected - request not sent.");
-                            out.close();
-                        }
-                        else {
-                            transactionLatency.setMarker(Marker.audio_streaming_end);
-                            _logData.audioDuration = ( fout.length() / bufferSize ) / 50F; // capture audio duration in seconds...
-                            sendTerminatingChunk(out, boundary);	// if query commands have been sent, ALWAYS send the terminating chunk to release server-side resources
-                            write("Processing ...");
-                            wait4TerminateSignal(getTxnTimeout());
-                        }
-
-
-                    } catch (IOException e) {
-                        write("I/O problems: " + e);
-                        System.exit(-1);
-                    }
-                }
-            };
-            Thread captureThread = new Thread(runner);
-            captureThread.start();
-
-        } catch (LineUnavailableException e) {
-            write("Line unavailable: " + e);
-            System.exit(-2);
-
-        }
-    }
-
-    /**
-     * Stream audio file.
-     *
-     * @param audioFile the audio file
-     */
-    protected void streamAudioFile(File audioFile) {
-
-        final AudioFormat format = getFormat();
-        final int bufferSize = (int) ((format.getSampleRate() * format.getFrameSize()) / 50);
-
-        Runnable runner = new Runnable() {
-            public void run() {
-
-                String boundary = null;
-                AudioFormat format = getFormat();
-                SpeechDetectorContext c = new SpeechDetectorContext();
-                boolean queryCommandsSent = false;
-                headersSent = false;
-
-                try {
-                    write("Streaming audio...");
-                    transactionLatency.setMarker(Marker.audio_streaming_begin);
-
-                    int audioDuration = 0;
-                    byte[] audio = FileLoader.load(audioFile);
-                    AudioChopper chopper = AudioChopperFactory.getAudioChopper(_requestData.IN_CODEC, audio);
-
-                    if( chopper != null ) {
-                        write("Sending");
-
-                        while(chopper.hasMoreFrame() && !queryFailed && !queryCancelled)
-                        {
-                            byte[] buffer = chopper.getNextFrame();
-                            c = speechDetector(new AudioPacket(format, buffer, buffer.length), c);
-                            if( verbose ) write(" [audio level: " + c.lastAudioPacket.energyLevel + "] ");
-
-                            if( c.startOfSpeechDetected ) {
-                                if( queryCommandsSent) {
-                                    sendAudioChunk(out, buffer, boundary);
-                                } else {
-                                    write("Start of speech detected!");
-
-                                    write("Sending NCS Query commands...");
-                                    boundary = sendAsrQueryCommands();
-                                    queryCommandsSent = true;
-
-                                    transactionLatency.setMarker(Marker.audio_streaming_begin);
-
-                                    // Send the leading silence. NCS recognition performs better when there is some leading silence...
-                                    Iterator<AudioPacket> itr1 = c.leadingSilenceQueue.iterator();
-                                    while(itr1.hasNext()) {
-                                        AudioPacket packet = itr1.next();
-                                        sendAudioChunk(out, ByteBuffer.wrap(packet.audio, 0, packet.size).array(), boundary);
-                                    }
-
-                                    // Send the buffered audio containing initial speech
-                                    Iterator<AudioPacket> itr2 = c.startOfSpeechQueue.iterator();
-                                    while(itr2.hasNext()){
-                                        AudioPacket packet = itr2.next();
-                                        sendAudioChunk(out, ByteBuffer.wrap(packet.audio, 0, packet.size).array(), boundary);
-                                    }
-
-                                }
-
-                                int wait = chopper.getFrameLengthInMs();
-                                synchronized(this) {
-                                    this.wait(wait);	// Simulate real-time streaming of audio (20ms frames)
-                                }
-                                audioDuration += wait;
-
-                            } else {
-                                continue;
-                            }
-                        }
-                    }
-                    else {
-                        write("WARNING - Real-time Audio Streaming Emulation Not Available for Audio File Type: " + _requestData.IN_CODEC);
-                        FileInputStream inputStream = new FileInputStream(audioFile);
-                        int nRead = 0;
-                        while( nRead != -1 && !queryFailed && !queryCancelled ) {
-                            byte[] buffer = new byte[bufferSize];
-                            nRead = inputStream.read(buffer, 0, bufferSize);
-                            if( nRead > 0 ) {
-                                ByteBuffer bbuf = ByteBuffer.wrap(buffer, 0, nRead);
-                                sendAudioChunk(out, bbuf.array(), boundary);
-                                synchronized(this) {
-                                    this.wait(20);	// Simulate real-time streaming of audio (20ms frames)
-                                }
-                            }
-                        }
-                        inputStream.close();
-                    }
-                    write();
-
-                    if( c.startOfSpeechDetected && queryCommandsSent) {
-                        transactionLatency.setMarker(Marker.audio_streaming_end);
-                        if( audioDuration == 0 )	// AudioChopper was not used, so assuming 20ms frames...
-                            _logData.audioDuration = ( audioFile.length() / bufferSize ) / 50F;
-                        else
-                            _logData.audioDuration = audioDuration;
-
-                        /** Notify the NCS service that the request is complete */
-                        sendTerminatingChunk(out, boundary);
-
-                        write("\nProcessing ...");
-
-                    } else {
-                        write("No speech detected!");
-                    }
-
-                } catch (IOException | InterruptedException e) {
-                    write("I/O problems: " + e);
-                    System.exit(-1);
-                } catch ( Exception e ) {
-                    write("Exception: " + e);
-                    System.exit(-1);
-                }
-                finally {
-                    if( latch != null ) latch.countDown();
-                }
-            }
-        };
-        Thread fileStreamThread = new Thread(runner);
-        fileStreamThread.start();
-    }
-
-    /**
-     * Gets the desired audio format.
-     *
-     * Sample rate = 16Khz
-     * Sample site = 16bits
-     * Num Channels = 1
-     * Signed = true
-     * Big Endian = false
-     *
-     * @return the format
-     */
-    protected AudioFormat getFormat() {
-        float sampleRate = 16000;
-        int sampleSizeInBits = 16;
-        int channels = 1;
-        boolean signed = true;
-        boolean bigEndian = false;
-        return new AudioFormat(sampleRate,
-                sampleSizeInBits, channels, signed, bigEndian);
-    }
-
-
     // ********************* CONNECTION AND NCS COMMAND HANDLERS *********************
 
     // Monitor socket timeout so app properly stops listening if no speech detected or recorder timeout fails...
@@ -1112,10 +397,6 @@ public class HttpAsrClient implements IHttpAsrClient {
                     headersSent = false;
                     reuseStatusCode = false;
                     br.close();
-
-                    if( listening ) {
-                        stopListening();
-                    }
 
                 } catch( InterruptedException e) {
                     // Timer cancelled. Nothing to do...
@@ -1188,73 +469,6 @@ public class HttpAsrClient implements IHttpAsrClient {
         }
 
         return null;
-    }
-
-    /**
-     * Send the sequence of Nuance Cloud Service Query commands in the recommended order.
-     * <br><br>
-     * These commands are sent after a successful connection is established, and just prior to streaming any audio after start-of-speech has been detected.
-     * <br>
-     * <ol>
-     * <li>QueryBegin</li>
-     * <li>QueryParameter [REQUEST_INFO]</li>
-     * <li>QueryParameter [AUDIO_INFO]</li>
-     * <li>QueryEnd</li>
-     * <li>AudoBegin</li>
-     * </ol>
-     * <br>
-     * The cloud service does not start processing audio until it receives the QueryEnd message.
-     * So although it's a bit counter-intuitive, it's important to send this message before streaming the audio to minimize any latency.
-     *
-     */
-    protected String sendAsrQueryCommands() {
-
-        /** Create a secure socket */
-        Socket s = connectToServer();
-
-        /** Listen and process the NCS response on a separate thread.
-         * This is necessary for receiving word-by-word results while streaming audio to the server
-         */
-        class ResultListener implements Runnable
-        {
-            Socket _s;
-            ResultListener(Socket s) {
-                _s = s;
-            }
-
-            public void run() {
-                try
-                {
-                    processResponse(_s);
-                }
-                catch (UnknownHostException e) {
-                    e.printStackTrace();
-                }
-                catch (IOException e) {
-                    e.printStackTrace();
-                } catch (JSONException e1) {
-                    e1.printStackTrace();
-                }
-            }
-        }
-        Thread t = new Thread(new ResultListener(s));
-        t.start();
-
-		/*
-		 * Refer to the "NCS HTTP Services 2.0 Users Guide" for more details on integrating via HTTP Services
-		 */
-
-        transactionLatency.setMarker(Marker.query_begin);
-
-        /** Send the NCS Command request data */
-        sendRequestData(out, _appId, _appKey, _userID, _requestData.getApplicationSessionID(), _requestData.getUtteranceNumber(), boundary);
-
-        /** Send the Dictation parameters */
-        sendDictParameter(out, boundary);
-
-        transactionLatency.setMarker(Marker.query_complete);
-
-        return boundary;
     }
 
     /**
@@ -1478,33 +692,6 @@ public class HttpAsrClient implements IHttpAsrClient {
         }
         catch (IOException e) {
             e.printStackTrace();
-        }
-    }
-
-    /**
-     * Send a chunk of audio
-     *
-     * @param out
-     * @param audioData
-     * @param boundary
-     */
-    protected void sendAudioChunk(OutputStream out, byte[] audioData, String boundary) {
-
-        try {
-            Chunk chunk = new Chunk();
-            chunk.append("--" + boundary + "\r\n");
-            chunk.append("Content-Disposition: form-data; name=\"ConcludingAudioParameter\";paramName=\"AUDIO_INFO\"\r\n");
-            chunk.append("Content-Type: audio/x-wav;codec=pcm;bit=16;rate=16000\r\n");
-            chunk.append("Content-Transfer-Encoding: binary\r\n");
-            chunk.append("\r\n");
-            chunk.append(audioData);
-            chunk.append("\r\n");
-            chunk.writeTo(out);
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            this.queryFailed = true;
-            //System.exit(-2);
         }
     }
 
@@ -1981,105 +1168,6 @@ public class HttpAsrClient implements IHttpAsrClient {
 
     // ********************* REQUEST HANDLERS *********************
 
-    /* (non-Javadoc)
-     * @see com.nuance.http_2_0.asr.IHttpAsrClient#start(java.lang.String)
-     */
-    @Override
-    public void start(String audioFilename) {
-        this.start(audioFilename, Codec.PCM_16_16K, true);
-    }
-
-    @Override
-    public void start(String audioPath, String codec, boolean streamingResults) {
-
-        _requestData.IN_CODEC = codec;
-        _requestData.OUT_CODEC = codec;
-        _streamingResults = streamingResults;
-
-        /** First, initialize a few parameters that will be passed in as part of the request to NCS Services */
-        this.initialize();
-        printLineSeparator();
-
-        if( batchModeEnabled() )
-            batchModeAsr(audioPath);
-        else if( audioPath != null )
-            batchModeAsr(audioPath);
-        else
-            monitorConsoleEvents();
-
-    }
-
-
-    /**
-     * Batch mode asr.
-     *
-     * @param path the path
-     */
-    protected void batchModeAsr(String path) {
-
-        // Loop thru and process each file in the path provided.
-        //	NOTE: Assumes all files are valid raw PCM 16K 16bit audio
-        File dir = new File(path);
-        FilenameFilter fileNameFilter = new FilenameFilter() {
-
-            @Override
-            public boolean accept(File dir, String name) {
-                write(name);
-                if(name.lastIndexOf('.')>0)
-                {
-                    // get last index for '.' char
-                    int lastIndex = name.lastIndexOf('.');
-
-                    // get extension
-                    String str = name.substring(lastIndex);
-
-                    // match path name extension
-                    if( str.equalsIgnoreCase(".pcm") || str.equalsIgnoreCase(".raw") )
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        };
-        File[] directoryListing = dir.listFiles(fileNameFilter);
-        if ( directoryListing != null) {
-            for (File file : directoryListing) {
-                transactionLatency.reset();
-                transactionLatency.setMarker(Marker.start);
-                write("Processing audio file: " + file.getAbsolutePath());
-                latch = new CountDownLatch(1);
-                streamAudioFile(file);
-                try {
-                    latch.await();	// Wait for audio file streaming to finish before placing a timer on the transaction response
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                wait4TerminateSignal(getTxnTimeout());
-            }
-        } else {
-            // Handle the case where dir is not really a directory.
-            // Checking dir.isDirectory() above would not be sufficient
-            // to avoid race conditions with another process that deletes
-            // directories.
-            File file = new File(path);
-            transactionLatency.reset();
-            transactionLatency.setMarker(Marker.start);
-            write("Processing audio file: " + file.getAbsolutePath());
-            latch = new CountDownLatch(1);
-            streamAudioFile(file);
-            try {
-                latch.await();	// Wait for audio file streaming to finish before placing a timer on the transaction response
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            wait4TerminateSignal(getTxnTimeout());
-        }
-
-        // Stop waiting for the socket connection to timeout after processing all audio files
-        connectionMonitorThread.interrupt();
-    }
-
     public void sendNluTextRequest(String message) {
         this.initialize();
         _message = message;
@@ -2233,75 +1321,30 @@ public class HttpAsrClient implements IHttpAsrClient {
         boolean requireTrustedRootCert = true;
         String topic = "nma_dm_main";
         String langCode = "eng-USA";
-        String codec = Codec.PCM_16_16K;
-        String audioPath = null;	//"audio/quickfox.pcm";  // Default audio file.
-        boolean streamingResults = true;
         boolean enableProfanityFiltering = false;
         boolean enableNLU = true;
-        String savedAudioPath = null;
         boolean batchMode = false;
-        boolean enableVAD = true;
         boolean resetUserProfile = false;
         String application = null;
         String nluTextStrings = null;
         String nluTextString = null;
         boolean verbose = false;
 
-        for( int i = 0; i < args.length; i=i+2) {
-            if( args[i].equals("-help") ) {
-                printUsage();
-                return;
-            }
-            else if( args[i].equals("-h") )
-                host = args[i+1];
-            else if( args[i].equals("-p") )
-                port = Integer.parseInt(args[i+1]);
-            else if( args[i].equals("-s") )
-                useTLS = Boolean.parseBoolean(args[i+1]);
-            else if( args[i].equals("-tr") )
-                requireTrustedRootCert = Boolean.parseBoolean(args[i+1]);
-            else if( args[i].equals("-n") )
-                nmaid = args[i+1];
-            else if( args[i].equals("-a") )
-                appKey = args[i+1];
-            else if( args[i].equals("-t") )
-                topic = args[i+1];
-            else if( args[i].equals("-l") )
-                langCode = args[i+1];
-            else if( args[i].equals("-c") )
-                codec = args[i+1];
-            else if( args[i].equals("-f") )
-                audioPath = args[i+1];
-            else if( args[i].equals("-streaming") )
-                streamingResults = Boolean.parseBoolean(args[i+1]);
-            else if( args[i].equals("-pf") )
-                enableProfanityFiltering = Boolean.parseBoolean(args[i+1]);
-            else if( args[i].equals("-nlu") )
-                enableNLU = Boolean.parseBoolean(args[i+1]);
-            else if( args[i].equalsIgnoreCase("-app") )
-                application = args[i+1];
-            else if( args[i].equalsIgnoreCase("-sap") )
-                savedAudioPath = args[i+1];
-            else if( args[i].equalsIgnoreCase("-bm") ) {
-                batchMode = true;
-                audioPath = args[i+1];
-            }
-            else if( args[i].equalsIgnoreCase("-vad") )
-                enableVAD = Boolean.parseBoolean(args[i+1]);
-            else if( args[i].equalsIgnoreCase("-rup") ) {
+                host = "mtldev08.nuance.com";
+                port = AppInfo.Port;
+                useTLS =
+                requireTrustedRootCert =
+                nmaid =
+                appKey =
+                topic =
+                langCode =
+                enableProfanityFiltering =
+                enableNLU =
+                application =
                 resetUserProfile = true;
-            }
-            else if( args[i].equalsIgnoreCase("-text-string") ) {
-                nluTextString = args[i+1];
-            }
-            else if( args[i].equalsIgnoreCase("-text-strings") ) {
-                nluTextStrings = args[i+1];
-            }
-            else if( args[i].equalsIgnoreCase("-v") )
-                verbose = Boolean.parseBoolean(args[i+1]);
-            else
-                continue;
-        }
+                nluTextString =
+                nluTextStrings =
+                verbose =
 
         if( host.equalsIgnoreCase("{Provide your hostname}") ||
                 nmaid.equalsIgnoreCase("{Provide your NMAID}") ||
@@ -2336,12 +1379,6 @@ public class HttpAsrClient implements IHttpAsrClient {
         if( batchMode )
             asrClient.enableBatchMode();
 
-        if( savedAudioPath != null )
-            asrClient.setSavedAudioPath(savedAudioPath);
-
-        if( !enableVAD )
-            asrClient.disableStartOfSpeechDetection();
-
         if( enableProfanityFiltering )	// profanity filtering is disabled by default
             asrClient.enableProfanityFiltering();
 
@@ -2363,9 +1400,6 @@ public class HttpAsrClient implements IHttpAsrClient {
             asrClient.batchModeText(nluTextStrings);
             System.exit(0);
         }
-
-        asrClient.start(audioPath, codec, streamingResults);
-
     }
 
 }

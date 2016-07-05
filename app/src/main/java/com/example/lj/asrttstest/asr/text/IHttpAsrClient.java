@@ -6,21 +6,9 @@ package com.example.lj.asrttstest.asr.text;
 
 public interface IHttpAsrClient {
 
-    public abstract void start(String audioFilename);
-
-    public abstract void start(String audioFile, String codec, boolean streamingResults);
-
     public abstract void enableBatchMode();
 
     public abstract void disableBatchMode();
-
-    public abstract void setSavedAudioPath(String savedAudioPath);
-
-    public abstract void enableStartOfSpeechDetection();
-
-    public abstract void disableStartOfSpeechDetection();
-
-    public abstract boolean isStartOfSpeechDetectionEnabled();
 
     public abstract void enableProfanityFiltering();
 
