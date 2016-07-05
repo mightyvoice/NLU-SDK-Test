@@ -17,6 +17,7 @@ public class AppInfo {
     public static final String Host = "mtldev02.nuance.com";
     public static final int Port = 443;
     public static final String AppId = "NMT_EVAL_TCL_20150814";
+    public static final String Application = "TCL";
     public static final byte[] AppKey = { (byte) 0x89, (byte) 0xe9,
             (byte) 0xb1, (byte) 0xb6, (byte) 0x19, (byte) 0xdf, (byte) 0xc7,
             (byte) 0xd6, (byte) 0x82, (byte) 0x23, (byte) 0x7e, (byte) 0x70,

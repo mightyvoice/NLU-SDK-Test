@@ -25,6 +25,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.example.lj.asrttstest.asr.CloudTextRecognizer;
+import com.example.lj.asrttstest.asr.text.HttpAsrClient;
+import com.example.lj.asrttstest.asr.text.IHttpAsrClient;
 import com.example.lj.asrttstest.dialog.CallingDomainProc;
 import com.example.lj.asrttstest.dialog.JsonParser;
 import com.example.lj.asrttstest.dialog.MessageDomainProc;
@@ -183,7 +185,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         startRecognitionButton.setEnabled(true);
-                        initCloudRecognition();
+//                        initCloudRecognition();
                     }
                 });
             }
@@ -423,11 +425,68 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return X.toString();
     }
 
-    private void startTextRecognition(String text) {
-        Log.d(TAG, "startTextRecognition: " + text);
-//        RecogSpec recogSpec = createRecogSpec(getDictationType(), getLanguage(), "TCL", text, null);
-//        mCloudTextRecognizer.startRecognition(recogSpec, recognizerTextListener);
-//        textRecognition(text);
+//    private void startTextRecognition(String text) {
+//        Log.d(TAG, "startTextRecognition: " + text);
+////        RecogSpec recogSpec = createRecogSpec(getDictationType(), getLanguage(), "TCL", text, null);
+////        mCloudTextRecognizer.startRecognition(recogSpec, recognizerTextListener);
+////        textRecognition(text);
+//    }
+
+    private void startTextRecognition(String _text) {
+        Log.d(TAG, "startTextRecognition: " + _text);
+        String host = "mtldev08.nuance.com";
+        String nmaid = "NMT_EVAL_TCL_20150814";
+        String appKey = "89e9b1b619dfc7d682237e701da7ada48316f675f73c5ecd23a41fc40782bc212ed3562022c23e75214dcb9010286c23afe100e00d4464873e004d1f4c8a5883";
+
+        /** DEFAULTS */
+        int port = 443;
+        boolean useTLS = true;
+        boolean requireTrustedRootCert = false;
+        String topic = "nma_dm_main";
+        String langCode = "eng-USA";
+        boolean enableProfanityFiltering = false;
+        boolean enableNLU = true;
+        boolean batchMode = false;
+        boolean resetUserProfile = false;
+        String application = AppInfo.Application;
+        String nluTextString = _text;
+
+        IHttpAsrClient asrClient = new HttpAsrClient(
+                host,
+                port,
+                useTLS,
+                nmaid,
+                appKey,
+                topic,
+                langCode );
+
+        if( !requireTrustedRootCert )
+            asrClient.disableTrustedRootCert();
+
+        // Reset User Profile requests take precedence over any other conflicting command-line args
+        if( resetUserProfile ) {
+            asrClient.resetUserProfile();
+            System.exit(0);
+        }
+
+        if( batchMode )
+            asrClient.enableBatchMode();
+
+        if( enableProfanityFiltering )	// profanity filtering is disabled by default
+            asrClient.enableProfanityFiltering();
+
+        if( !enableNLU )	// NLU is enabled by default
+            asrClient.disableNLU();
+
+        if( application != null && !application.isEmpty() )	// default application is full.6.2 which likely won't work since customer-specific provisioning is necessary :)
+            asrClient.setApplication(application);
+
+        // Command-line args indicating NLU Text mode take precedence over args for Audio
+        if( nluTextString != null ) {
+            asrClient.enableTextNLU();
+            asrClient.sendNluTextRequest(nluTextString);
+            System.exit(0);
+        }
     }
 
     private String getDictationType(){

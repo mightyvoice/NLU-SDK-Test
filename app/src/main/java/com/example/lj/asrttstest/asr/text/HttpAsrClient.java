@@ -4,6 +4,8 @@ package com.example.lj.asrttstest.asr.text;
  * Created by lj on 16/6/30.
  */
 
+import android.util.Log;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -920,6 +922,9 @@ public class HttpAsrClient implements IHttpAsrClient {
 
                         JSONObject json = new JSONObject(json_1);
 
+                        //display result
+                        Log.d("ssss", json.toString(4));
+
                         if(json.has("final_response") && json.getInt("final_response") == 0) {
                             if( json.has("transcriptions") )
                                 write("Streaming Response: " + json.getJSONArray("transcriptions").getString(0));
@@ -1306,55 +1311,27 @@ public class HttpAsrClient implements IHttpAsrClient {
      * -vad voice activity detection
      * -rup reset user profile
      *
-     * @param args
+     * @param _message the text for recognition
      * @throws Exception
      */
-    public static void main(String[] args) throws Exception {
+    public void startUploadMessage(String _message) {
 
-        String host = "{Provide your hostname}";
-        String nmaid = "{Provide your NMAID}";
-        String appKey = "{Provide your 128-byte String App Key}";
+        String host = "mtldev08.nuance.com";
+        String nmaid = "NMT_EVAL_TCL_20150814";
+        String appKey = "89e9b1b619dfc7d682237e701da7ada48316f675f73c5ecd23a41fc40782bc212ed3562022c23e75214dcb9010286c23afe100e00d4464873e004d1f4c8a5883";
 
         /** DEFAULTS */
         int port = 443;
         boolean useTLS = true;
-        boolean requireTrustedRootCert = true;
+        boolean requireTrustedRootCert = false;
         String topic = "nma_dm_main";
         String langCode = "eng-USA";
         boolean enableProfanityFiltering = false;
         boolean enableNLU = true;
         boolean batchMode = false;
         boolean resetUserProfile = false;
-        String application = null;
-        String nluTextStrings = null;
-        String nluTextString = null;
-        boolean verbose = false;
-
-                host = "mtldev08.nuance.com";
-                port = AppInfo.Port;
-                useTLS =
-                requireTrustedRootCert =
-                nmaid =
-                appKey =
-                topic =
-                langCode =
-                enableProfanityFiltering =
-                enableNLU =
-                application =
-                resetUserProfile = true;
-                nluTextString =
-                nluTextStrings =
-                verbose =
-
-        if( host.equalsIgnoreCase("{Provide your hostname}") ||
-                nmaid.equalsIgnoreCase("{Provide your NMAID}") ||
-                appKey.equalsIgnoreCase("{Provide your 128-byte String App Key}") ||
-                host.length() == 0 ||
-                nmaid.length() == 0 ||
-                appKey.length() != 128 ) {
-            printUsage();
-            System.exit(0);
-        }
+        String application = AppInfo.Application;
+        String nluTextString = _message;
 
         IHttpAsrClient asrClient = new HttpAsrClient(
                 host,
@@ -1364,8 +1341,6 @@ public class HttpAsrClient implements IHttpAsrClient {
                 appKey,
                 topic,
                 langCode );
-
-        if( verbose ) asrClient.enableVerbose();
 
         if( !requireTrustedRootCert )
             asrClient.disableTrustedRootCert();
@@ -1394,12 +1369,13 @@ public class HttpAsrClient implements IHttpAsrClient {
             asrClient.sendNluTextRequest(nluTextString);
             System.exit(0);
         }
-        if( nluTextStrings != null ) {
-            asrClient.enableBatchMode();
-            asrClient.enableTextNLU();
-            asrClient.batchModeText(nluTextStrings);
-            System.exit(0);
-        }
+
+//        if( nluTextStrings != null ) {
+//            asrClient.enableBatchMode();
+//            asrClient.enableTextNLU();
+//            asrClient.batchModeText(nluTextStrings);
+//            System.exit(0);
+//        }
     }
 
 }

@@ -24,8 +24,8 @@ import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.fileupload.MultipartStream;
-import org.apache.http.HttpEntity;
+//import org.apache.commons.fileupload.MultipartStream;
+//import org.apache.http.HttpEntity;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -180,133 +180,6 @@ public class ResponseParser {
         }
 
         return parts;
-    }
-
-    /**
-     *  Read and print out response from the server using Apache HTTP Components Library
-     *
-     *  Use this method for processing responses to ASR and NLU queries
-     *
-     *  Please refer to the HTTP 2.0 User Guide and NCS Command Specification, available from Professional Services,
-     *  for additional details of NCS responses and how to parse out specific elements
-     *
-     * @param entity
-     * @param boundary
-     */
-    public static void handleMultipartResponse(HttpEntity entity, String boundary) {
-
-        try {
-
-            MultipartStream multipartStream = new MultipartStream(entity.getContent(), boundary.getBytes(), 4096, null);
-
-            System.out.println();
-
-            boolean nextPart = multipartStream.skipPreamble();
-            while(nextPart) {
-
-                String header = multipartStream.readHeaders();
-
-                if (header.contains("QueryResult")) {
-                    OutputStream os = new java.io.ByteArrayOutputStream();
-                    multipartStream.readBodyData(os);
-                    JSONObject json = new JSONObject(os.toString());
-                    if( json.has("final_response") && (1 == json.getInt("final_response"))) {
-                        System.out.println(header);
-                        System.out.println(json.toString(4));
-                    }
-                }
-                else if(header.contains("QueryRetry") || header.contains("QueryError")) {
-                    OutputStream os = new java.io.ByteArrayOutputStream();
-                    multipartStream.readBodyData(os);
-                    System.out.println(header);
-                    JSONObject json = new JSONObject(os.toString());
-                    System.out.println(json.toString(4));
-                }
-                else {
-                    System.out.println(header);
-                    multipartStream.readBodyData(System.out);
-                }
-
-                nextPart = multipartStream.readBoundary();
-            }
-
-            System.out.println();
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    /**
-     *  Read and print out response from the server using Apache HTTP Components Library
-     *
-     *  Use this method for processing responses to TTS queries. This will write the audio to file.
-     *
-     *  Please refer to the HTTP 2.0 User Guide and NCS Command Specification, available from Professional Services,
-     *  for additional details of NCS responses and how to parse out specific elements
-     *
-     * @param entity
-     * @param boundary
-     * @param audioFilename
-     */
-    public static void handleMultipartResponse(HttpEntity entity, String boundary, String audioFilename) {
-
-        try {
-            if( audioFilename.startsWith(File.separator) )
-                audioFilename = audioFilename.replaceFirst(File.separator, "");
-
-            File dir = new File(".");
-            File fout = new File(dir.getCanonicalPath() + File.separator + audioFilename);
-            dir = new File(fout.getParent());
-            System.out.println("Writing to: " + fout.getCanonicalPath());
-
-            if( !fout.exists() ) {
-                dir.mkdirs();
-                fout.createNewFile();
-            }
-
-            OutputStream FileOutput = new FileOutputStream(fout);
-            MultipartStream multipartStream = new MultipartStream(entity.getContent(), boundary.getBytes(), 4096, null);
-
-            System.out.println();
-
-            boolean nextPart = multipartStream.skipPreamble();
-            while(nextPart) {
-
-                String header = multipartStream.readHeaders();
-                if (header.contains("TEXT_TO_READ")) {
-                    /** Stream audio to file... */
-                    multipartStream.readBodyData(FileOutput);
-                }
-                else if (header.contains("QueryResult")) {
-                    System.out.println(header);
-                    OutputStream os = new java.io.ByteArrayOutputStream();
-                    multipartStream.readBodyData(os);
-                    JSONObject json = new JSONObject(os.toString());
-                    System.out.println(json.toString(4));
-
-                }
-                else if(header.contains("QueryRetry") || header.contains("QueryError")) {
-                    OutputStream os = new java.io.ByteArrayOutputStream();
-                    multipartStream.readBodyData(os);
-                    System.out.println(header);
-                    JSONObject json = new JSONObject(os.toString());
-                    System.out.println(json.toString(4));
-                }
-                else {
-                    System.out.println(header);
-                    multipartStream.readBodyData(System.out);
-                }
-
-                nextPart = multipartStream.readBoundary();
-            }
-
-            System.out.println();
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
 }
