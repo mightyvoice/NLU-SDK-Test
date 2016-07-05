@@ -154,7 +154,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                         // Cloud services initialization
                         _cloudServices = CloudServices.createCloudServices(NLUCloudASRActivity.this,
                                 new CloudConfig(AppInfo.Host, AppInfo.Port, AppInfo.AppId, AppInfo.AppKey,
-                                        _uniqueId, AudioType.SPEEX_WB, AudioType.SPEEX_WB));
+                                         AudioType.SPEEX_WB, AudioType.SPEEX_WB));
                         _cloudRecognizer = new CloudRecognizer(_cloudServices);
                         startRecognitionButton.setEnabled(true);
                     }
