@@ -113,6 +113,7 @@ public class HttpAsrClient implements IHttpAsrClient {
     /** The client-side transaction timeout. Default is 5000ms. */
     protected final int txnTimeout = 10000;
 
+    private boolean finishReadingResponse = false;
     /**
      * Request Data parameters are passed in with every NCS transaction request. Many of these parameters are used for
      * tuning language and acoustic models. Others are for reporting/analytics. Therefore, it's important to ensure your
@@ -498,7 +499,7 @@ public class HttpAsrClient implements IHttpAsrClient {
 
             json.put("appId", appId);
             json.put("appKey", appKey);
-            json.put("uid", uId);
+            json.put("uId", uId);
             json.put("inCodec", _requestData.IN_CODEC);
             json.put("outCodec", _requestData.OUT_CODEC);
             json.put("cmdName", ( isNluEnabled() ? ( (isNluTextEnabled()) ? RequestData.COMMAND_NAME_NLU_TEXT : RequestData.COMMAND_NAME_NLU_ASR ) : RequestData.COMMAND_NAME_ASR ) );
@@ -618,7 +619,7 @@ public class HttpAsrClient implements IHttpAsrClient {
 
             json.put("appId", this._appId);
             json.put("appKey", this._appKey);
-            json.put("uid", this._userID);
+            json.put("uId", this._userID);
             json.put("inCodec", _requestData.IN_CODEC);
             json.put("outCodec", _requestData.OUT_CODEC);
             json.put("cmdName", "NVC_RESET_USER_PROFILE_CMD");
@@ -1071,12 +1072,9 @@ public class HttpAsrClient implements IHttpAsrClient {
 //        transactionLatency.setMarker(Marker.query_complete);
 //        wait4TerminateSignal(getTxnTimeout());
 
+        finishReadingResponse = false;
         new SendCommandsAsyncTask().execute();
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        wait4TerminateSignal(getTxnTimeout());
     }
 
     public void batchModeText(String filename) {
@@ -1152,51 +1150,13 @@ public class HttpAsrClient implements IHttpAsrClient {
             sendNluTextQueryCommands();
             sendTerminatingChunk(out, boundary);
             transactionLatency.setMarker(Marker.query_complete);
-            wait4TerminateSignal(getTxnTimeout());
+//            wait4TerminateSignal(getTxnTimeout());
             return null;
         }
     }
 
     // ******************** STATIC COMMAND LINE OPTIONS METHODS *********************
 
-    /**
-     * Prints the usage
-     */
-    public void printUsage(){
-
-        String path = HttpAsrClient.class.getProtectionDomain().getCodeSource().getLocation().getFile();
-        File f = new File(path);
-        String jar = f.getName();
-
-        write("\n" +
-                "Usage: java -jar " + jar + " -h host -n your_maid -a your_128_byte_string_app_key [OPTIONS]\n" +
-                "\n" +
-                "Required options:\n" +
-                "\t-h host \n" +
-                "\t-n nmaid \n" +
-                "\t-a appkey \n" +
-                "\n" +
-                "Optional inputs:\n" +
-                "\t-help (display this usage information)\n" +
-                "\t-p port (default is 443)\n" +
-                "\t-s use tls (default is true. specify false to disable tls)\n" +
-                "\t-tr require trusted root certificate chain (default is true. specify false to not require a trusted root certificate chain.)\n" +
-                "\t-t topic (default is nma_dm_main)\n" +
-                "\t-l language code (default is eng-USA)\n" +
-                "\t-c codec (default is PCM_16_16K)\n" +
-                "\t-f audio file (only required if not using batch mode or console input)\n" +
-                "\t-streaming enable/disable word-by-word streaming (default is true (enabled). specify false to disable. NOTE: requires special server-side configuration)\n" +
-                "\t-pf enable/disable profanity filtering (default is false (disabled). specify true to enable. NOTE: requires special server-side configuration)\n" +
-                "\t-nlu enable/disable Dragon NLU (default is true (enabled). specify false to disable and just do ASR. NOTE: requires special server-side configuration)\n" +
-                "\t-app specify the NCS Ref NLU application name (default is full.6.2. Specify a pre-configured NLU profile application name. NOTE: requires special server-side configuration)\n" +
-                "\t-sap saved audio path (default is present working directory. Specify a path to save captured audio to)\n" +
-                "\t-bm batch mode (default is false. specify path to audio files to enable batch mode. NOTE: batch mode takes precedence over the -f option)\n" +
-                "\t-text-string specify NLU text string to use instead of audio. NOTE: this flag takes precedence over any arguments related to audio and implies an NLU request.\n" +
-                "\t-text-strings specify file containing text strings to use instead of audio. Each query to be interpreted is on it's own line. NOTE: this flag takes precedence over any arguments related to audio and implies an NLU request.\n" +
-                "\t-vad voice activity detection (default is true. specify false to disable speech detection)\n" +
-                "\t-rup reset user profile (specify this flag to reset the user's acoustic and language model profiles on the server)\n" +
-                "\t-v verbose (default is false. specify true to increase verbosity level)\n");
-    }
 
     /**
      * Supported command-line parameters:
