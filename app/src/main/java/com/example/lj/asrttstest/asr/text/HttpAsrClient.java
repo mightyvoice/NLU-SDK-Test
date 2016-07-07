@@ -4,6 +4,7 @@ package com.example.lj.asrttstest.asr.text;
  * Created by lj on 16/6/30.
  */
 
+import android.os.AsyncTask;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -104,13 +105,13 @@ public class HttpAsrClient implements IHttpAsrClient {
     protected LatencyMonitor transactionLatency = new LatencyMonitor();
 
     /** An instance of the LogData class. */
-    protected LogData _logData = new LogData();
+//    protected LogData _logData = new LogData();
 
     /** A synchronization object to wait for asynchronous web socket responses and task completion. */
     private static Object waitLock = new Object();
 
     /** The client-side transaction timeout. Default is 5000ms. */
-    protected int txnTimeout = 5000;
+    protected final int txnTimeout = 10000;
 
     /**
      * Request Data parameters are passed in with every NCS transaction request. Many of these parameters are used for
@@ -131,7 +132,7 @@ public class HttpAsrClient implements IHttpAsrClient {
         static final String COMMAND_NAME_ASR = "NMDP_ASR_CMD";				// NCS Command Name. NMDP_ASR_CMD = Dictation. NMDP_TTS_CMD = Text-to-Speech. The complete set of available command names are provided upon request.
         static final String COMMAND_NAME_NLU_ASR = "DRAGON_NLU_ASR_CMD";
         static final String COMMAND_NAME_NLU_TEXT = "DRAGON_NLU_APPSERVER_CMD";
-        public String LANGUAGE = "eng-USA";								// Supported language codes can be found here: http://dragonmobile.nuancemobiledeveloper.com/public/index.php?task=supportedLanguages
+        public String LANGUAGE = "att";								// Supported language codes can be found here: http://dragonmobile.nuancemobiledeveloper.com/public/index.php?task=supportedLanguages
         public String DICTATION_TYPE = "nma_dm_main";					// This is also sometimes referred to as Topic and Language Model. Supported values are: nma_dm_main (for NLU personal assistant), Dictation, Websearch, and DTV. Please reach out to Sales or PS for available language support for a given dictation type.
         static final String UI_LANGUAGE = "en";							// The keyboard language
         public String APPLICATION = "full.6.2";							// The name of the application configured in the NLU profile. This is unique to each customer and requires custom server-side provisioning by Nuance. The default value provided here will likely not work.
@@ -212,122 +213,64 @@ public class HttpAsrClient implements IHttpAsrClient {
 
     // ********************* GETTERS / SETTERS *********************
 
-    /**
-     * Enable batch mode.
-     */
     public void enableBatchMode() {
         batchMode = true;
     }
 
-    /**
-     * Disable batch mode.
-     */
     public void disableBatchMode() {
         batchMode = false;
     }
 
-    /**
-     * Check if batch mode is enabled.
-     *
-     * @return true, if enabled
-     */
     public boolean batchModeEnabled() {
         return batchMode;
     }
 
-    /**
-     * Enable profanity filtering
-     */
     public void enableProfanityFiltering() {
         _profanityFilteringEnabled = true;
     }
 
-    /**
-     * Disable profanity filtering
-     */
     public void disableProfanityFiltering() {
         _profanityFilteringEnabled = false;
     }
 
-    /**
-     * Check if profanity filtering is enabled
-     */
     public boolean isProfanityFilteringEnabled() {
         return _profanityFilteringEnabled;
     }
 
-    /**
-     * Set the name of the NLU profile application
-     */
     public void setApplication( String application ) {
         _requestData.APPLICATION = application;
     }
 
-    /**
-     * Get the name of the NLU profile application
-     */
     public String getApplication() {
         return _requestData.APPLICATION;
     }
 
-    /**
-     * Enable NLU
-     */
     public void enableNLU() {
         _nluEnabled = true;
     }
 
-    /**
-     * Disable NLU
-     */
     public void disableNLU() {
         _nluEnabled = false;
     }
 
-    /**
-     * Check if NLU is enabled
-     */
     public boolean isNluEnabled() {
         return _nluEnabled;
     }
 
-    /**
-     * Enable NLU
-     */
     public void enableTextNLU() {
         _nluEnabled = true;
         _useTextNlu = true;
     }
 
-    /**
-     * Disable NLU
-     */
     public void disableTextNLU() {
         _nluEnabled = false;
         _useTextNlu = false;
     }
 
-    /**
-     * Check if NLU is enabled
-     */
     public boolean isNluTextEnabled() {
         return _useTextNlu;
     }
 
-    /**
-     * Sets the txn timeout.
-     *
-     * @param val the new txn timeout
-     */
-    public void setTxnTimeout(int val) {
-        txnTimeout = val;
-    }
-
-    /**
-     * Gets the txn timeout.
-     *
-     * @return the txn timeout
-     */
     public int getTxnTimeout() {
         return txnTimeout;
     }
@@ -340,17 +283,14 @@ public class HttpAsrClient implements IHttpAsrClient {
         _requireTrustedRootCert = false;
     }
 
-    /** Enable verbose */
     public void enableVerbose() {
         verbose = true;
     }
 
-    /** Disable verbose */
     public void disableVerbose() {
         verbose = false;
     }
 
-    /** Get verbose */
     public boolean isVerbose() {
         return verbose;
     }
@@ -396,9 +336,6 @@ public class HttpAsrClient implements IHttpAsrClient {
 
     };
 
-    /**
-     * Initiate a web socket connection to the server and send a "connect" message to NCS.
-     */
     protected Socket connectToServer() {
         try {
 
@@ -409,8 +346,8 @@ public class HttpAsrClient implements IHttpAsrClient {
                 br = new BufferedReader(new InputStreamReader(s.getInputStream()));
 
                 transactionLatency.setMarker(Marker.connected);
-                _logData.timeToConnect = transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.connected);
-                write("Time to establish socket connection: " + _logData.timeToConnect);
+//                _logData.timeToConnect = transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.connected);
+//                write("Time to establish socket connection: " + _logData.timeToConnect);
 
                 connectionTimeout = s.getSoTimeout();
                 write("Keep Alive Enabled: " + s.getKeepAlive());
@@ -425,8 +362,8 @@ public class HttpAsrClient implements IHttpAsrClient {
                 write("Socket connection already created");
 
                 transactionLatency.setMarker(Marker.connected);
-                _logData.timeToConnect = transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.connected);
-                write("Time to establish socket connection: " + _logData.timeToConnect);
+//                _logData.timeToConnect = transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.connected);
+//                write("Time to establish socket connection: " + _logData.timeToConnect);
 
                 // Interrupt any previously started connection monitor. We'll reset the timer below...
                 connectionMonitorThread.interrupt();
@@ -457,18 +394,6 @@ public class HttpAsrClient implements IHttpAsrClient {
         return null;
     }
 
-    /**
-     * Send the sequence of Nuance Cloud Service Query commands for Text NLU in the recommended order.
-     * <br><br>
-     * These commands are sent after a successful connection is established, and just prior to streaming any audio after start-of-speech has been detected.
-     * <br>
-     * <ol>
-     * <li>QueryBegin</li>
-     * <li>QueryParameter [REQUEST_INFO]</li>
-     * <li>QueryEnd</li>
-     * </ol>
-     *
-     */
     protected String sendNluTextQueryCommands() {
 
         /** Create a secure socket */
@@ -573,7 +498,7 @@ public class HttpAsrClient implements IHttpAsrClient {
 
             json.put("appId", appId);
             json.put("appKey", appKey);
-            json.put("uId", uId);
+            json.put("uid", uId);
             json.put("inCodec", _requestData.IN_CODEC);
             json.put("outCodec", _requestData.OUT_CODEC);
             json.put("cmdName", ( isNluEnabled() ? ( (isNluTextEnabled()) ? RequestData.COMMAND_NAME_NLU_TEXT : RequestData.COMMAND_NAME_NLU_ASR ) : RequestData.COMMAND_NAME_ASR ) );
@@ -693,7 +618,7 @@ public class HttpAsrClient implements IHttpAsrClient {
 
             json.put("appId", this._appId);
             json.put("appKey", this._appKey);
-            json.put("uId", this._userID);
+            json.put("uid", this._userID);
             json.put("inCodec", _requestData.IN_CODEC);
             json.put("outCodec", _requestData.OUT_CODEC);
             json.put("cmdName", "NVC_RESET_USER_PROFILE_CMD");
@@ -816,7 +741,7 @@ public class HttpAsrClient implements IHttpAsrClient {
 
                     // Save the session id. This is critical for debugging issues with the service
                     if( headers.containsKey("nuance-sessionid") )
-                        _logData.sessionId = headers.get("nuance-sessionid");
+//                        _logData.sessionId = headers.get("nuance-sessionid");
 
                     // Save the multi-part boundary if it exists. We'll need this to properly parse remaining body content
                     if( headers.containsKey("content-type") ) {
@@ -841,16 +766,16 @@ public class HttpAsrClient implements IHttpAsrClient {
                             write();
                             if( _streamingResults ) {
                                 write("Time from first audio packet to first reponse: " + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.initial_response) + " seconds");
-                                _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.initial_response);
+//                                _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.initial_response);
                             } else {
                                 write("Time from last audio packet to first reponse: " + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.initial_response) + " seconds");
-                                _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.initial_response);
+//                                _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.initial_response);
                             }
                         }
 
                         if( transactionLatency.getMarker(Marker.final_response) == -1 ) {
                             transactionLatency.setMarker(Marker.final_response);
-                            _logData.timeToFinalResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.final_response);
+//                            _logData.timeToFinalResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.final_response);
                         }
                         break;
                     }
@@ -864,10 +789,10 @@ public class HttpAsrClient implements IHttpAsrClient {
                         write();
                         if( _streamingResults ) {
                             write("Time from first audio packet to first reponse: " + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.initial_response) + " seconds");
-                            _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.initial_response);
+//                            _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_begin, Marker.initial_response);
                         } else {
                             write("Time from last audio packet to first reponse: " + transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.initial_response) + " seconds");
-                            _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.initial_response);
+//                            _logData.timeToFirstResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.initial_response);
                         }
                     }
 
@@ -907,7 +832,7 @@ public class HttpAsrClient implements IHttpAsrClient {
                         JSONObject json = new JSONObject(json_1);
 
                         //display result
-                        Log.d("ssss", json.toString(4));
+//                        Log.d("ssss", json.toString(4));
 
                         if(json.has("final_response") && json.getInt("final_response") == 0) {
                             if( json.has("transcriptions") )
@@ -967,7 +892,7 @@ public class HttpAsrClient implements IHttpAsrClient {
                     if( bodyParts.containsKey("size") && Integer.valueOf(bodyParts.get("size")) == 0 ) {
                         if( transactionLatency.getMarker(Marker.final_response) == -1 ) {
                             transactionLatency.setMarker(Marker.final_response);
-                            _logData.timeToFinalResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.final_response);
+//                            _logData.timeToFinalResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.final_response);
                         }
                         break;
                     }
@@ -982,20 +907,20 @@ public class HttpAsrClient implements IHttpAsrClient {
         } finally {
             if( transactionLatency.getMarker(Marker.final_response) == -1 ) {
                 transactionLatency.setMarker(Marker.final_response);
-                _logData.timeToFinalResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.final_response);
+//                _logData.timeToFinalResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.final_response);
             }
 
             printLineSeparator();
             write("Done reading response...");
 
             transactionLatency.setMarker(Marker.stop);
-            _logData.totalTrxnDuration = transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.stop);
+//            _logData.totalTrxnDuration = transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.stop);
 
             this.printLineSeparator();
             showLatencyMarkers();
 
             /** LogData object will write important stuff to log.txt in csv format */
-            _logData.writeToFile();
+//            _logData.writeToFile();
 
             synchronized(waitLock) {
                 try {
@@ -1012,36 +937,12 @@ public class HttpAsrClient implements IHttpAsrClient {
 
     // ********************* MISCELLANEOUS *********************
 
-    /**
-     * Routine to verify if a string is a valid JSON object
-     *
-     * @param str
-     * @return
-     */
     protected boolean isJSON(String str) {
         try
         {
             JSONObject json = new JSONObject(str);
         }
         catch (JSONException e) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Routine to verify if a string is numeric
-     *
-     * @param str
-     * @return
-     */
-    protected boolean isNumeric(String str) {
-        try
-        {
-            int size = Integer.parseInt(str, 16);
-        }
-        catch(NumberFormatException nfe)
-        {
             return false;
         }
         return true;
@@ -1080,7 +981,8 @@ public class HttpAsrClient implements IHttpAsrClient {
      * Write an empty line to console.
      */
     private void write() {
-        System.out.println();
+//        System.out.println();
+        Log.d("sss", "\n");
     }
 
     /**
@@ -1089,7 +991,8 @@ public class HttpAsrClient implements IHttpAsrClient {
      * @param msg the msg
      */
     private void write(String msg) {
-        System.out.println(msg);
+//        System.out.println(msg);
+        Log.d("sss", msg);
     }
 
     /** Help display some transaction timing markers */
@@ -1118,9 +1021,6 @@ public class HttpAsrClient implements IHttpAsrClient {
 
     }
 
-    /**
-     * Re-usable method to help make the generated output more readable
-     */
     protected void printLineSeparator() {
         write();
         write("---------------------------------");
@@ -1164,13 +1064,19 @@ public class HttpAsrClient implements IHttpAsrClient {
         this.initialize();
         _message = message;
 
-        transactionLatency.reset();
-        transactionLatency.setMarker(Marker.start);
-        sendNluTextQueryCommands();
-        sendTerminatingChunk(out, boundary);
-        transactionLatency.setMarker(Marker.query_complete);
-        wait4TerminateSignal(getTxnTimeout());
+//        transactionLatency.reset();
+//        transactionLatency.setMarker(Marker.start);
+//        sendNluTextQueryCommands();
+//        sendTerminatingChunk(out, boundary);
+//        transactionLatency.setMarker(Marker.query_complete);
+//        wait4TerminateSignal(getTxnTimeout());
 
+        new SendCommandsAsyncTask().execute();
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public void batchModeText(String filename) {
@@ -1237,18 +1143,32 @@ public class HttpAsrClient implements IHttpAsrClient {
         }
     }
 
-    // ********************* STATIC COMMAND LINE OPTIONS METHODS *********************
+    private class SendCommandsAsyncTask extends AsyncTask<String, Integer, String> {
+
+        @Override
+        protected String doInBackground(String... params) {
+            transactionLatency.reset();
+            transactionLatency.setMarker(Marker.start);
+            sendNluTextQueryCommands();
+            sendTerminatingChunk(out, boundary);
+            transactionLatency.setMarker(Marker.query_complete);
+            wait4TerminateSignal(getTxnTimeout());
+            return null;
+        }
+    }
+
+    // ******************** STATIC COMMAND LINE OPTIONS METHODS *********************
 
     /**
      * Prints the usage
      */
-    public static void printUsage(){
+    public void printUsage(){
 
         String path = HttpAsrClient.class.getProtectionDomain().getCodeSource().getLocation().getFile();
         File f = new File(path);
         String jar = f.getName();
 
-        System.out.println("\n" +
+        write("\n" +
                 "Usage: java -jar " + jar + " -h host -n your_maid -a your_128_byte_string_app_key [OPTIONS]\n" +
                 "\n" +
                 "Required options:\n" +
@@ -1354,7 +1274,7 @@ public class HttpAsrClient implements IHttpAsrClient {
         if( nluTextString != null ) {
             asrClient.enableTextNLU();
             asrClient.sendNluTextRequest(nluTextString);
-            System.exit(0);
+//            System.exit(0);
         }
 
 //        if( nluTextStrings != null ) {

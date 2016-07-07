@@ -193,8 +193,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                 stopRecognitionButton.setEnabled(true);
                 cancelButton.setEnabled(true);
 
-                startTextRecognition("Make a phone call");
-
+//                startTextRecognition("Make a phone call");
+                startTextRecognition("Call Teddy");
             }
         });
 

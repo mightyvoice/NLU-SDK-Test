@@ -5,20 +5,7 @@ package com.example.lj.asrttstest.asr.text;
  */
 
 import java.io.IOException;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateExpiredException;
-import java.security.cert.CertificateNotYetValidException;
-import java.security.cert.X509Certificate;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-
-import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.KeyManagementException;
@@ -56,6 +43,8 @@ public class SocketFactory {
 
         try {
             s = sf.createSocket();
+//            s = new Socket();
+//            s.connect(new InetSocketAddress(host, port), 10000);
             return s;
         }
         catch( Exception e ) {
