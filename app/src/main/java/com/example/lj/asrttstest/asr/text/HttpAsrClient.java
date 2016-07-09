@@ -25,19 +25,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-
-//import javax.sound.sampled.AudioFormat;
-//import javax.sound.sampled.AudioSystem;
-//import javax.sound.sampled.DataLine;
-//import javax.sound.sampled.LineUnavailableException;
-//import javax.sound.sampled.TargetDataLine;
-
-//import org.apache.commons.collections4.queue.CircularFifoQueue;
-
 import com.example.lj.asrttstest.asr.text.LatencyMonitor.Marker;
 import com.example.lj.asrttstest.info.AppInfo;
 
-public class HttpAsrClient implements IHttpAsrClient {
+public class HttpAsrClient {
 
     // ********************* PRIVATE FIELDS *********************
 
@@ -104,16 +95,13 @@ public class HttpAsrClient implements IHttpAsrClient {
     /** An instance of the LatencyMonitor class. */
     protected LatencyMonitor transactionLatency = new LatencyMonitor();
 
-    /** An instance of the LogData class. */
-//    protected LogData _logData = new LogData();
-
     /** A synchronization object to wait for asynchronous web socket responses and task completion. */
     private static Object waitLock = new Object();
 
     /** The client-side transaction timeout. Default is 5000ms. */
     protected final int txnTimeout = 10000;
 
-    private boolean finishReadingResponse = false;
+    public JSONObject serverResponseJSON = null;
     /**
      * Request Data parameters are passed in with every NCS transaction request. Many of these parameters are used for
      * tuning language and acoustic models. Others are for reporting/analytics. Therefore, it's important to ensure your
@@ -187,13 +175,6 @@ public class HttpAsrClient implements IHttpAsrClient {
     // ********************* CONSTRUCTORS *********************
 
     /** Constructor */
-    public HttpAsrClient(String host, int port, String appId, String appKey, boolean useTLS) {
-
-        this(host, port, useTLS, appId, appKey, "Dictation", "eng-USA");
-
-    }
-
-    /** Constructor */
     public HttpAsrClient(String host, int port, boolean useTLS, String appId,
                          String appKey, String topic, String langCode) {
 
@@ -218,24 +199,8 @@ public class HttpAsrClient implements IHttpAsrClient {
         batchMode = true;
     }
 
-    public void disableBatchMode() {
-        batchMode = false;
-    }
-
-    public boolean batchModeEnabled() {
-        return batchMode;
-    }
-
     public void enableProfanityFiltering() {
         _profanityFilteringEnabled = true;
-    }
-
-    public void disableProfanityFiltering() {
-        _profanityFilteringEnabled = false;
-    }
-
-    public boolean isProfanityFilteringEnabled() {
-        return _profanityFilteringEnabled;
     }
 
     public void setApplication( String application ) {
@@ -263,11 +228,6 @@ public class HttpAsrClient implements IHttpAsrClient {
         _useTextNlu = true;
     }
 
-    public void disableTextNLU() {
-        _nluEnabled = false;
-        _useTextNlu = false;
-    }
-
     public boolean isNluTextEnabled() {
         return _useTextNlu;
     }
@@ -276,20 +236,8 @@ public class HttpAsrClient implements IHttpAsrClient {
         return txnTimeout;
     }
 
-    public void enableTrustedRootCert() {
-        _requireTrustedRootCert = true;
-    }
-
     public void disableTrustedRootCert() {
         _requireTrustedRootCert = false;
-    }
-
-    public void enableVerbose() {
-        verbose = true;
-    }
-
-    public void disableVerbose() {
-        verbose = false;
     }
 
     public boolean isVerbose() {
@@ -327,9 +275,11 @@ public class HttpAsrClient implements IHttpAsrClient {
 
                 } catch( InterruptedException e) {
                     // Timer cancelled. Nothing to do...
-                    write( "Connection timer interrupted..." );
+//                    write( "Connection timer interrupted..." );
+                    Log.d("sss", "Connection timer interrupted...");
                 } catch( IOException e ) {
-                    write("Error closing socket reader: " + e.getMessage());
+//                    write("Error closing socket reader: " + e.getMessage());
+                    Log.d("sss", "Error closing socket reader: " + e.getMessage());
                 }
             }
 
@@ -389,7 +339,6 @@ public class HttpAsrClient implements IHttpAsrClient {
 
         } catch (Exception e) {
             e.printStackTrace();
-            System.exit(-2);
         }
 
         return null;
@@ -443,6 +392,9 @@ public class HttpAsrClient implements IHttpAsrClient {
 
         transactionLatency.setMarker(Marker.query_complete);
 
+        //Ji's code
+//        wait4TerminateSignal(getTxnTimeout());
+
         return boundary;
 
     }
@@ -472,7 +424,7 @@ public class HttpAsrClient implements IHttpAsrClient {
 
             Chunk chunk = new Chunk();
             chunk.append(sb.toString());
-            this.printDataSent(chunk);
+//            this.printDataSent(chunk);
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -538,7 +490,7 @@ public class HttpAsrClient implements IHttpAsrClient {
             chunk.append("\r\n");
             chunk.writeTo(out);
 
-            this.printDataSent(chunk);
+//            this.printDataSent(chunk);
         }
         catch (JSONException e) {
             e.printStackTrace();
@@ -597,7 +549,7 @@ public class HttpAsrClient implements IHttpAsrClient {
             chunk.append("\r\n");
             chunk.writeTo(out);
 
-            this.printDataSent(chunk);
+//            this.printDataSent(chunk);
         }
         catch (JSONException e) {
             e.printStackTrace();
@@ -654,7 +606,7 @@ public class HttpAsrClient implements IHttpAsrClient {
             chunk.append("\r\n");
             chunk.writeTo(out);
 
-            this.printDataSent(chunk);
+//            this.printDataSent(chunk);
         }
         catch (JSONException e) {
             e.printStackTrace();
@@ -681,7 +633,7 @@ public class HttpAsrClient implements IHttpAsrClient {
             Chunk terminatingChunk = new Chunk();
             terminatingChunk.writeTo(out);
 
-            this.printDataSent(chunk);
+//            this.printDataSent(chunk);
             write("Sent terminating chunk.");
         }
         catch (IOException e) {
@@ -832,9 +784,6 @@ public class HttpAsrClient implements IHttpAsrClient {
 
                         JSONObject json = new JSONObject(json_1);
 
-                        //display result
-//                        Log.d("ssss", json.toString(4));
-
                         if(json.has("final_response") && json.getInt("final_response") == 0) {
                             if( json.has("transcriptions") )
                                 write("Streaming Response: " + json.getJSONArray("transcriptions").getString(0));
@@ -866,10 +815,14 @@ public class HttpAsrClient implements IHttpAsrClient {
                             if( json.has("transcriptions") ) {
                                 write("Final Response: " + json.getJSONArray("transcriptions").getString(0));
                                 write("Final JSON Response: " + json.toString(4));
+
                             }
                             else if( json.has("appserver_results") && json.getJSONObject("appserver_results").has("payload")
                                     && json.getJSONObject("appserver_results").getJSONObject("payload").has("actions")
                                     && json.getJSONObject("appserver_results").getJSONObject("payload").getJSONArray("actions").length() > 0 ) {
+
+                                //Ji's code
+                                serverResponseJSON = json;
                                 JSONArray actions = json.getJSONObject("appserver_results").getJSONObject("payload").getJSONArray("actions");
                                 for( int i = 0; i < actions.length(); i++ ) {
                                     JSONObject action = actions.getJSONObject(i);
@@ -880,6 +833,9 @@ public class HttpAsrClient implements IHttpAsrClient {
                                     }
                                 }
                                 write("Final JSON Response: " + json.toString(4));
+
+                                //Ji's code
+                                return;
                             } else
                                 write("Unsupported Response Format: " + json.toString(4));
                         }
@@ -903,31 +859,26 @@ public class HttpAsrClient implements IHttpAsrClient {
             }
 
         } catch(SocketTimeoutException e) {
-            write("Socket Exception: " + e.getMessage());
+            Log.d("sss", "Socket Exception: " + e.getMessage());
 
         } finally {
             if( transactionLatency.getMarker(Marker.final_response) == -1 ) {
                 transactionLatency.setMarker(Marker.final_response);
-//                _logData.timeToFinalResponse = transactionLatency.calculateDistanceBetweenMarkers(Marker.audio_streaming_end, Marker.final_response);
             }
 
             printLineSeparator();
             write("Done reading response...");
 
             transactionLatency.setMarker(Marker.stop);
-//            _logData.totalTrxnDuration = transactionLatency.calculateDistanceBetweenMarkers(Marker.start, Marker.stop);
 
             this.printLineSeparator();
             showLatencyMarkers();
-
-            /** LogData object will write important stuff to log.txt in csv format */
-//            _logData.writeToFile();
 
             synchronized(waitLock) {
                 try {
                     waitLock.notifyAll();
                 } catch( IllegalMonitorStateException e ) {
-                    write( e.getMessage() );
+                    Log.d("sss", e.getMessage() );
                 }
             }
 
@@ -1053,7 +1004,7 @@ public class HttpAsrClient implements IHttpAsrClient {
             try {
                 waitLock.wait(timeout);
             } catch( InterruptedException e ) {
-                System.out.println( e.getMessage() );
+                e.printStackTrace();
             }
         }
     }
@@ -1064,48 +1015,13 @@ public class HttpAsrClient implements IHttpAsrClient {
     public void sendNluTextRequest(String message) {
         this.initialize();
         _message = message;
-
-//        transactionLatency.reset();
-//        transactionLatency.setMarker(Marker.start);
-//        sendNluTextQueryCommands();
-//        sendTerminatingChunk(out, boundary);
-//        transactionLatency.setMarker(Marker.query_complete);
-//        wait4TerminateSignal(getTxnTimeout());
-
-        finishReadingResponse = false;
-        new SendCommandsAsyncTask().execute();
-        wait4TerminateSignal(getTxnTimeout());
-    }
-
-    public void batchModeText(String filename) {
-
-        File file = new File(filename);
-
-        // Read the file provided and process each line
-        try {
-            FileInputStream stream = new FileInputStream(file);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-
-            String line = null;
-            int count = 1;
-            while ((line = reader.readLine()) != null) {
-                if( line.trim().length() == 0 ) continue;
-                write("[row " + count++ + "] : " + line);
-                sendNluTextRequest(line);
-            }
-            stream.close();
-            if( (count - 1) == 0 )
-                write("Empty file!");
-
-        }
-        catch (FileNotFoundException e) {
-            write("File not found. [" + file.toString() + "]");
-            return;
-        }
-        catch (IOException e) {
-            write("IOException [" + e.getMessage() + "]");
-            return;
-        }
+        serverResponseJSON = null;
+        transactionLatency.reset();
+        transactionLatency.setMarker(Marker.start);
+        sendNluTextQueryCommands();
+        sendTerminatingChunk(out, boundary);
+        transactionLatency.setMarker(Marker.query_complete);
+        wait4TerminateSignal(5000);
     }
 
     public void resetUserProfile() {
@@ -1136,113 +1052,10 @@ public class HttpAsrClient implements IHttpAsrClient {
                     return;
             }
         } catch(Exception e) {
-            write(e.getMessage());
+//            write(e.getMessage());
+            e.printStackTrace();
 
         }
-    }
-
-    private class SendCommandsAsyncTask extends AsyncTask<String, Integer, String> {
-
-        @Override
-        protected String doInBackground(String... params) {
-            transactionLatency.reset();
-            transactionLatency.setMarker(Marker.start);
-            sendNluTextQueryCommands();
-            sendTerminatingChunk(out, boundary);
-            transactionLatency.setMarker(Marker.query_complete);
-//            wait4TerminateSignal(getTxnTimeout());
-            return null;
-        }
-    }
-
-    // ******************** STATIC COMMAND LINE OPTIONS METHODS *********************
-
-
-    /**
-     * Supported command-line parameters:
-     * -h host
-     * -p port
-     * -s use tls
-     * -n nmaid
-     * -a appkey
-     * -t topic
-     * -l language code
-     * -c codec
-     * -f audio file
-     * -streaming
-     * -pf profanity filtering
-     * -nlu dragon nlu
-     * -app nlu application name
-     * -sap saved audio path
-     * -bm batch mode
-     * -vad voice activity detection
-     * -rup reset user profile
-     *
-     * @param _message the text for recognition
-     * @throws Exception
-     */
-    public void startUploadMessage(String _message) {
-
-        String host = "mtldev08.nuance.com";
-        String nmaid = "NMT_EVAL_TCL_20150814";
-        String appKey = "89e9b1b619dfc7d682237e701da7ada48316f675f73c5ecd23a41fc40782bc212ed3562022c23e75214dcb9010286c23afe100e00d4464873e004d1f4c8a5883";
-
-        /** DEFAULTS */
-        int port = 443;
-        boolean useTLS = true;
-        boolean requireTrustedRootCert = false;
-        String topic = "nma_dm_main";
-        String langCode = "eng-USA";
-        boolean enableProfanityFiltering = false;
-        boolean enableNLU = true;
-        boolean batchMode = false;
-        boolean resetUserProfile = false;
-        String application = AppInfo.Application;
-        String nluTextString = _message;
-
-        IHttpAsrClient asrClient = new HttpAsrClient(
-                host,
-                port,
-                useTLS,
-                nmaid,
-                appKey,
-                topic,
-                langCode );
-
-        if( !requireTrustedRootCert )
-            asrClient.disableTrustedRootCert();
-
-        // Reset User Profile requests take precedence over any other conflicting command-line args
-        if( resetUserProfile ) {
-            asrClient.resetUserProfile();
-            System.exit(0);
-        }
-
-        if( batchMode )
-            asrClient.enableBatchMode();
-
-        if( enableProfanityFiltering )	// profanity filtering is disabled by default
-            asrClient.enableProfanityFiltering();
-
-        if( !enableNLU )	// NLU is enabled by default
-            asrClient.disableNLU();
-
-        if( application != null && !application.isEmpty() )	// default application is full.6.2 which likely won't work since customer-specific provisioning is necessary :)
-            asrClient.setApplication(application);
-
-        // Command-line args indicating NLU Text mode take precedence over args for Audio
-        if( nluTextString != null ) {
-            asrClient.enableTextNLU();
-            asrClient.sendNluTextRequest(nluTextString);
-//            System.exit(0);
-        }
-
-//        if( nluTextStrings != null ) {
-//            asrClient.enableBatchMode();
-//            asrClient.enableTextNLU();
-//            asrClient.batchModeText(nluTextStrings);
-//            System.exit(0);
-//        }
     }
 
 }

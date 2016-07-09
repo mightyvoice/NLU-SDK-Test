@@ -15,6 +15,7 @@ public class AppInfo {
 //    //////////Settings for TTS
 //    //// it seems that it works for ASR and NLU
     public static final String Host = "mtldev02.nuance.com";
+    public static final String TextHost = "mtldev08.nuance.com";
     public static final int Port = 443;
     public static final String AppId = "NMT_EVAL_TCL_20150814";
     public static final String Application = "TCL";

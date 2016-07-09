@@ -1,23 +1,16 @@
 package com.example.lj.asrttstest;
 
-import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Handler;
-import android.os.Vibrator;
-import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.telephony.SmsManager;
-import android.text.format.Time;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
@@ -26,66 +19,34 @@ import android.widget.TextView;
 
 import com.example.lj.asrttstest.asr.CloudTextRecognizer;
 import com.example.lj.asrttstest.asr.text.HttpAsrClient;
-import com.example.lj.asrttstest.asr.text.IHttpAsrClient;
-import com.example.lj.asrttstest.dialog.CallingDomainProc;
 import com.example.lj.asrttstest.dialog.JsonParser;
-import com.example.lj.asrttstest.dialog.MessageDomainProc;
 import com.example.lj.asrttstest.info.AppInfo;
-import com.example.lj.asrttstest.info.Global;
-import com.example.lj.asrttstest.upload.Grammar;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
-import com.nuance.dragon.toolkit.audio.AudioEnergyListener;
 import com.nuance.dragon.toolkit.audio.AudioType;
-import com.nuance.dragon.toolkit.audio.SpeechDetectionListener;
-import com.nuance.dragon.toolkit.audio.pipes.AudioEnergyCalculatorPipe;
-import com.nuance.dragon.toolkit.audio.pipes.BufferingDuplicatorPipe;
-import com.nuance.dragon.toolkit.audio.pipes.DuplicatorPipe;
 import com.nuance.dragon.toolkit.audio.pipes.EndPointerPipe;
-import com.nuance.dragon.toolkit.audio.pipes.NoiseSuppressionPipe;
-import com.nuance.dragon.toolkit.audio.pipes.NormalizerPipe;
-import com.nuance.dragon.toolkit.audio.pipes.OpusEncoderPipe;
-import com.nuance.dragon.toolkit.audio.pipes.PrecisionClearBufferingPipe;
 import com.nuance.dragon.toolkit.audio.pipes.SpeexEncoderPipe;
-import com.nuance.dragon.toolkit.audio.pipes.TimeoutPipe;
-import com.nuance.dragon.toolkit.audio.sources.MicrophoneRecorderSource;
 import com.nuance.dragon.toolkit.audio.sources.RecorderSource;
 import com.nuance.dragon.toolkit.cloudservices.CloudConfig;
 import com.nuance.dragon.toolkit.cloudservices.CloudServices;
-import com.nuance.dragon.toolkit.cloudservices.DataParam;
 import com.nuance.dragon.toolkit.cloudservices.DictionaryParam;
-import com.nuance.dragon.toolkit.cloudservices.Transaction;
-import com.nuance.dragon.toolkit.cloudservices.TransactionError;
-import com.nuance.dragon.toolkit.cloudservices.TransactionResult;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognitionError;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognitionResult;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognizer;
 import com.nuance.dragon.toolkit.cloudservices.recognizer.RecogSpec;
-import com.nuance.dragon.toolkit.elvis.ElvisConfig;
-import com.nuance.dragon.toolkit.elvis.ElvisRecognizer;
-import com.nuance.dragon.toolkit.elvis.EndpointingParam;
 
 
 /////differnt SDK different path
-import com.nuance.dragon.toolkit.util.Logger;
 import com.nuance.dragon.toolkit.util.WorkerThread;
 //import com.nuance.dragon.toolkit.oem.api.Logger;
 //import com.nuance.dragon.toolkit.oem.api.WorkerThread;
 import com.nuance.dragon.toolkit.data.Data;
-import com.nuance.dragon.toolkit.data.Data.Dictionary;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.ObjectInputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
@@ -158,7 +119,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         final Button cancelButton = (Button) findViewById(R.id.cancelCloudRecognitionButton);
         final Spinner resultModeSpinner = (Spinner) findViewById(R.id.resultModeSpinner);
 
-        startRecognitionButton.setEnabled(false);
+        startRecognitionButton.setEnabled(true);
         stopRecognitionButton.setEnabled(false);
         cancelButton.setEnabled(false);
         resultModeSpinner.setEnabled(false);
@@ -170,60 +131,48 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         // First, grammar set-up
         final Handler uiHandler = new Handler();
 
-        _workerThread = new WorkerThread();
-        _workerThread.start();
-        _workerThread.getHandler().post(new Runnable() {
-            @Override
-            public void run() {
-//                readDragonData();
-                uiHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        startRecognitionButton.setEnabled(true);
-//                        initCloudRecognition();
-                    }
-                });
-            }
-        });
+
 
         startRecognitionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startRecognitionButton.setEnabled(false);
-                stopRecognitionButton.setEnabled(true);
-                cancelButton.setEnabled(true);
+//                final JSONObject[] result = new JSONObject[1];
+//
+////                startTextRecognition("Make a phone call");
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        startTextRecognition("Call Teddy");
+                    }
+                });
+                thread.start();
 
-//                startTextRecognition("Make a phone call");
-                startTextRecognition("Call Teddy");
+//                new TextRecognitionAsyncTask().execute();
+
+//                try {
+//                    Thread.sleep(5000);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+
+//                try{
+//                    sendJsonToEmail(result[0].toString(4));
+//                }catch (JSONException e){
+//                    e.printStackTrace();
+//                }
             }
         });
 
-        stopRecognitionButton.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View v)
-            {
-                startRecognitionButton.setEnabled(false);
-                stopRecognitionButton.setEnabled(false);
-                cancelButton.setEnabled(true);
+    }
 
-                mCloudRecognizer.processResult();
-                stopRecording();
-            }
-        });
+    private class TextRecognitionAsyncTask extends AsyncTask<String, Integer, String> {
 
-        cancelButton.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View v)
-            {
-                startRecognitionButton.setEnabled(false);
-                stopRecognitionButton.setEnabled(false);
-                cancelButton.setEnabled(false);
-                mCloudRecognizer.cancel();
-                stopRecording();
-            }
-        });
+        @Override
+        protected String doInBackground(String... params) {
+            startTextRecognition("Call Teddy");
+            return null;
+        }
     }
 
     @Override
@@ -243,41 +192,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         data.putExtra(Intent.EXTRA_SUBJECT, "这是标题");
         data.putExtra(Intent.EXTRA_TEXT, result);
         startActivity(data);
-    }
-
-    private void showResults(TextView textbox, String result)
-    {
-        Logger.debug(this, "" + result);
-        if (result == null)
-        {
-            textbox.setText("no results");
-            textbox.setVisibility(View.GONE);
-            return;
-        }
-
-        textbox.setVisibility(View.VISIBLE);
-        textbox.setText(result);
-    }
-
-    private void stopRecording()
-    {
-        if (_endpointerPipe  != null)
-        {
-            _endpointerPipe.disconnectAudioSource();
-            _endpointerPipe = null;
-        }
-
-        if (_speexPipe  != null)
-        {
-            _speexPipe.disconnectAudioSource();
-            _speexPipe = null;
-        }
-
-        if (_recorder  != null)
-        {
-            _recorder.stopRecording();
-            _recorder = null;
-        }
     }
 
     protected String getTimeZone() {
@@ -420,21 +334,9 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return X.toString();
     }
 
-//    private void startTextRecognition(String text) {
-//        Log.d(TAG, "startTextRecognition: " + text);
-////        RecogSpec recogSpec = createRecogSpec(getDictationType(), getLanguage(), "TCL", text, null);
-////        mCloudTextRecognizer.startRecognition(recogSpec, recognizerTextListener);
-////        textRecognition(text);
-//    }
-
-    private void startTextRecognition(String _text) {
+    private JSONObject startTextRecognition(String _text) {
         Log.d(TAG, "startTextRecognition: " + _text);
-        String host = "mtldev08.nuance.com";
-        String nmaid = "NMT_EVAL_TCL_20150814";
         String appKey = "89e9b1b619dfc7d682237e701da7ada48316f675f73c5ecd23a41fc40782bc212ed3562022c23e75214dcb9010286c23afe100e00d4464873e004d1f4c8a5883";
-
-        /** DEFAULTS */
-        int port = 443;
         boolean useTLS = true;
         boolean requireTrustedRootCert = false;
         String topic = "nma_dm_main";
@@ -446,11 +348,11 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         String application = AppInfo.Application;
         String nluTextString = _text;
 
-        IHttpAsrClient asrClient = new HttpAsrClient(
-                host,
-                port,
+        HttpAsrClient asrClient = new HttpAsrClient(
+                AppInfo.TextHost,
+                AppInfo.Port,
                 useTLS,
-                nmaid,
+                AppInfo.AppId,
                 appKey,
                 topic,
                 langCode );
@@ -461,7 +363,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         // Reset User Profile requests take precedence over any other conflicting command-line args
         if( resetUserProfile ) {
             asrClient.resetUserProfile();
-            System.exit(0);
         }
 
         if( batchMode )
@@ -482,6 +383,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
             asrClient.sendNluTextRequest(nluTextString);
             System.exit(0);
         }
+
+        return asrClient.serverResponseJSON;
     }
 
     private String getDictationType(){
