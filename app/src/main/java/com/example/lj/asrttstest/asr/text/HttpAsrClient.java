@@ -121,7 +121,7 @@ public class HttpAsrClient {
         static final String COMMAND_NAME_ASR = "NMDP_ASR_CMD";				// NCS Command Name. NMDP_ASR_CMD = Dictation. NMDP_TTS_CMD = Text-to-Speech. The complete set of available command names are provided upon request.
         static final String COMMAND_NAME_NLU_ASR = "DRAGON_NLU_ASR_CMD";
         static final String COMMAND_NAME_NLU_TEXT = "DRAGON_NLU_APPSERVER_CMD";
-        public String LANGUAGE = "att";								// Supported language codes can be found here: http://dragonmobile.nuancemobiledeveloper.com/public/index.php?task=supportedLanguages
+        public String LANGUAGE = "eng-USA";								// Supported language codes can be found here: http://dragonmobile.nuancemobiledeveloper.com/public/index.php?task=supportedLanguages
         public String DICTATION_TYPE = "nma_dm_main";					// This is also sometimes referred to as Topic and Language Model. Supported values are: nma_dm_main (for NLU personal assistant), Dictation, Websearch, and DTV. Please reach out to Sales or PS for available language support for a given dictation type.
         static final String UI_LANGUAGE = "en";							// The keyboard language
         public String APPLICATION = "full.6.2";							// The name of the application configured in the NLU profile. This is unique to each customer and requires custom server-side provisioning by Nuance. The default value provided here will likely not work.
@@ -140,10 +140,6 @@ public class HttpAsrClient {
         private String _applicationSessionID = null;					// Track multiple transaction requests within a single application session
         private int _utteranceNumber = 1;								// Track the sequence of transaction requests within an application session
 
-        public void clearApplicationSessionID() {
-            _applicationSessionID = null;
-        }
-
         public String initApplicationSessionID() {
             _applicationSessionID = AppInfo.applicationSessionID;
 
@@ -155,11 +151,7 @@ public class HttpAsrClient {
         }
 
         public void resetUtteranceNumber() {
-            _utteranceNumber = 1;
-        }
-
-        public int incrementUtteranceNumber() {
-            return _utteranceNumber++;
+            _utteranceNumber = 5;
         }
 
         public int getUtteranceNumber() {

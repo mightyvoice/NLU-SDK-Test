@@ -394,7 +394,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
         settings.put("audio_source", "SpeakerAndMicrophone");
 
         //my code to set other parameters
-        settings.put("uid", AppInfo.IMEInumber);
+        settings.put("uId", AppInfo.IMEInumber);
         return settings;
     }
 
