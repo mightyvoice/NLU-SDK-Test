@@ -874,6 +874,9 @@ public class HttpAsrClient {
             this.printLineSeparator();
             showLatencyMarkers();
 
+            //Ji's code
+            s.close();
+
             synchronized(waitLock) {
                 try {
                     waitLock.notifyAll();
@@ -979,19 +982,6 @@ public class HttpAsrClient {
         write();
     }
 
-    protected void printDataSent( Chunk chunk ) {
-        if( isVerbose() ) {
-            write();
-            write("<<<<<< Sending >>>>>>");
-            try {
-                chunk.writeTo(System.out);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            write();
-        }
-    }
-
     /**
      * Wait to be signaled that the server has provided response.
      * <br><br>
@@ -1002,7 +992,8 @@ public class HttpAsrClient {
     private static void wait4TerminateSignal(int timeout) {
         synchronized(waitLock) {
             try {
-                waitLock.wait(timeout);
+//                waitLock.wait(timeout);
+                waitLock.wait();
             } catch( InterruptedException e ) {
                 e.printStackTrace();
             }
