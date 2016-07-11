@@ -64,7 +64,7 @@ public class HttpAsrClient {
     protected boolean _nluEnabled = true;
 
     /** Flag to track using text instead of audio for NLU interpretation */
-    private boolean _useTextNlu = false;
+    private boolean _useTextNlu = true;
 
     /** The text to pass in for NLU interpretation */
     private String _message = null;
