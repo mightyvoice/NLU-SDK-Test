@@ -4,6 +4,8 @@ package com.example.lj.asrttstest.asr.text;
  * Created by lj on 16/6/30.
  */
 
+import com.example.lj.asrttstest.info.Global;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -161,7 +163,10 @@ public class SocketFactory {
             s = javax.net.SocketFactory.getDefault().createSocket(_host, _port);
         }
 
-        s.setSoTimeout(30000);
+//        s.setSoTimeout(30000);
+
+        //Ji's code
+        s.setSoTimeout(Global.SOCKET_TIME_OUT);
 
         return s;
     }

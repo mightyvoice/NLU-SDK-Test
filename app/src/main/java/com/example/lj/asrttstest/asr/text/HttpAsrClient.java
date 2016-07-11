@@ -27,6 +27,7 @@ import java.util.UUID;
 
 import com.example.lj.asrttstest.asr.text.LatencyMonitor.Marker;
 import com.example.lj.asrttstest.info.AppInfo;
+import com.example.lj.asrttstest.info.Global;
 
 public class HttpAsrClient {
 
@@ -121,7 +122,7 @@ public class HttpAsrClient {
         static final String COMMAND_NAME_ASR = "NMDP_ASR_CMD";				// NCS Command Name. NMDP_ASR_CMD = Dictation. NMDP_TTS_CMD = Text-to-Speech. The complete set of available command names are provided upon request.
         static final String COMMAND_NAME_NLU_ASR = "DRAGON_NLU_ASR_CMD";
         static final String COMMAND_NAME_NLU_TEXT = "DRAGON_NLU_APPSERVER_CMD";
-        public String LANGUAGE = "att";								// Supported language codes can be found here: http://dragonmobile.nuancemobiledeveloper.com/public/index.php?task=supportedLanguages
+        public String LANGUAGE = "eng-USA";								// Supported language codes can be found here: http://dragonmobile.nuancemobiledeveloper.com/public/index.php?task=supportedLanguages
         public String DICTATION_TYPE = "nma_dm_main";					// This is also sometimes referred to as Topic and Language Model. Supported values are: nma_dm_main (for NLU personal assistant), Dictation, Websearch, and DTV. Please reach out to Sales or PS for available language support for a given dictation type.
         static final String UI_LANGUAGE = "en";							// The keyboard language
         public String APPLICATION = "full.6.2";							// The name of the application configured in the NLU profile. This is unique to each customer and requires custom server-side provisioning by Nuance. The default value provided here will likely not work.
@@ -140,10 +141,6 @@ public class HttpAsrClient {
         private String _applicationSessionID = null;					// Track multiple transaction requests within a single application session
         private int _utteranceNumber = 1;								// Track the sequence of transaction requests within an application session
 
-        public void clearApplicationSessionID() {
-            _applicationSessionID = null;
-        }
-
         public String initApplicationSessionID() {
             _applicationSessionID = AppInfo.applicationSessionID;
 
@@ -155,11 +152,7 @@ public class HttpAsrClient {
         }
 
         public void resetUtteranceNumber() {
-            _utteranceNumber = 1;
-        }
-
-        public int incrementUtteranceNumber() {
-            return _utteranceNumber++;
+            _utteranceNumber = 5;
         }
 
         public int getUtteranceNumber() {
@@ -249,7 +242,7 @@ public class HttpAsrClient {
     // Monitor socket timeout so app properly stops listening if no speech detected or recorder timeout fails...
     private volatile Thread connectionMonitorThread = null;
     private volatile static Object connectionWaitLock = new Object();
-    protected int connectionTimeout = 60000;
+    protected int connectionTimeout = Global.CONNECTION_TIME_OUT;
     protected volatile boolean connectionTimedOut = false;
     protected volatile boolean headersSent = false;
     private volatile boolean reuseStatusCode = false;
@@ -526,6 +519,27 @@ public class HttpAsrClient {
 
             //json.put("wake_up_phrase", "Hello Joe");
 
+
+            //Ji's code to add grammar
+            /*"grammar_list": [
+            {
+            "id" : "contacts",
+            "type" : "structured_content",
+            "structured_content_category" : "contacts",
+            "checksum" : "<whatever the checksum value is from your last data upload>"
+            }
+            ]
+            */
+            JSONArray grammarArray = new JSONArray();
+            JSONObject contactGrammar = new JSONObject();
+            contactGrammar.put("id", "contacts");
+            contactGrammar.put("type", "structured_content");
+            contactGrammar.put("structured_content_category", "contacts");
+            contactGrammar.put("checksum", AppInfo.dataUploadReturnedCheckSum);
+            grammarArray.put(contactGrammar);
+            json.put("grammar_list", grammarArray);
+
+
             if( isNluEnabled() ) {
                 JSONObject appServerData = new JSONObject();
 
@@ -538,6 +552,8 @@ public class HttpAsrClient {
 
                 json.put("appserver_data", appServerData);
             }
+
+//            Log.d("sss", json.toString(4));
 
             Chunk chunk = new Chunk();
             chunk.append("--" + boundary + "\r\n");
@@ -835,7 +851,7 @@ public class HttpAsrClient {
                                 write("Final JSON Response: " + json.toString(4));
 
                                 //Ji's code
-                                return;
+//                                return;
                             } else
                                 write("Unsupported Response Format: " + json.toString(4));
                         }
@@ -873,9 +889,6 @@ public class HttpAsrClient {
 
             this.printLineSeparator();
             showLatencyMarkers();
-
-            //Ji's code
-            s.close();
 
             synchronized(waitLock) {
                 try {
@@ -992,8 +1005,7 @@ public class HttpAsrClient {
     private static void wait4TerminateSignal(int timeout) {
         synchronized(waitLock) {
             try {
-//                waitLock.wait(timeout);
-                waitLock.wait();
+                waitLock.wait(timeout);
             } catch( InterruptedException e ) {
                 e.printStackTrace();
             }

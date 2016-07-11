@@ -10,8 +10,8 @@
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content" />
             <Button
-                android:id="@+id/nluCloudRecognizerButton"
-                android:text="@string/Nlu_Cloud_Recognizer"
+                android:id="@+id/textNLUCloudRecognizerButton"
+                android:text="Text Cloud Recognizer"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content" />
             <Button

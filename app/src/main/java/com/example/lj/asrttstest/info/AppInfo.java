@@ -55,8 +55,7 @@ public class AppInfo {
 
     public static String IMEInumber;
     public static String applicationSessionID;
-
-    public static String mixApplicationSessionID;
+    public static String dataUploadReturnedCheckSum = "";
 
     public static final String mixHost = "nmsp.dev.nuance.com";
     public static final int mixPort = 443;
