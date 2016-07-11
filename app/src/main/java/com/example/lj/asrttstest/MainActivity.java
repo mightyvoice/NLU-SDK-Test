@@ -46,7 +46,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        final Button nluCloudRecognizerButton = (Button) findViewById(R.id.nluCloudRecognizerButton);
+        final Button nluCloudRecognizerButton = (Button) findViewById(R.id.textNLUCloudRecognizerButton);
         nluCloudRecognizerButton.setOnClickListener(new View.OnClickListener()
         {
             @Override

@@ -128,10 +128,23 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
                                 .getJSONObject("value")
                                 .getJSONObject("status")
                                 .getString("value");
-                        Log.d("res", resultStatus);
+                        Log.d("Upload Status: ", resultStatus);
                     }catch (JSONException e){
                         e.printStackTrace();
                     }
+
+                    //Ji's code to get the checksum from data uploading
+                    AppInfo.dataUploadReturnedCheckSum = "";
+                    AppInfo.dataUploadReturnedCheckSum = results
+                            .optJSONObject("value")
+                            .optJSONObject("result_list")
+                            .optJSONArray("value")
+                            .optJSONObject(0)
+                            .optJSONObject("value")
+                            .optJSONObject("checksum")
+                            .optString("value");
+                    Log.d("Returned Checksum: ", AppInfo.dataUploadReturnedCheckSum);
+
                 }
 
                 @Override

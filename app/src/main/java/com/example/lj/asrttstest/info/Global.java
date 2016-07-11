@@ -8,4 +8,6 @@ import java.util.ArrayList;
 public class Global {
     public static ArrayList<String> ambiguityList = new ArrayList<String>();
     public static Integer ambiguityListChosenID = -1;
+    public static final int SOCKET_TIME_OUT = 60000;
+    public static final int CONNECTION_TIME_OUT = 60000;
 }

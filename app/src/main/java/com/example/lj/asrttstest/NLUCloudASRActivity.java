@@ -9,13 +9,17 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.lj.asrttstest.asr.CloudTextRecognizer;
 import com.example.lj.asrttstest.asr.text.HttpAsrClient;
@@ -55,50 +59,44 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 
     private final String TAG = "NLUCloud";
 
-    private TextView resultEditText = null;
+    private EditText inputEditText = null;
+
+    private Button startRecognitionButton = null;
+
+    private JSONObject serverResponseJSON = null;
+
+    private String textForRecognition = null;
+
+    private TextView resultTextView = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_cloud_asr);
-        resultEditText = (TextView) findViewById(R.id.cloudResultEditText);
-        final Button startRecognitionButton = (Button) findViewById(R.id.startCloudRecognitionButton);
-        final Button stopRecognitionButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
-        final Button cancelButton = (Button) findViewById(R.id.cancelCloudRecognitionButton);
-        final Spinner resultModeSpinner = (Spinner) findViewById(R.id.resultModeSpinner);
+        setContentView(R.layout.activity_nlu_cloud_asr);
+        inputEditText = (EditText) findViewById(R.id.textForRecognitionView);
+        startRecognitionButton = (Button) findViewById(R.id.startTextRecognitionButton);
+        resultTextView = (TextView)findViewById(R.id.textRecognitionResultView);
 
         startRecognitionButton.setEnabled(true);
-        stopRecognitionButton.setEnabled(false);
-        cancelButton.setEnabled(false);
-        resultModeSpinner.setEnabled(false);
+        inputEditText.setText("Call Teddy");
+        resultTextView.setMovementMethod(ScrollingMovementMethod.getInstance());
 
         AppInfo.applicationSessionID = String.valueOf(UUID.randomUUID());
 
         startRecognitionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startRecognitionButton.setEnabled(false);
-//                Thread thread = new Thread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        startTextRecognition("Call Teddy");
-//                    }
-//                });
-//                thread.start();
 
-                new TextRecognitionAsyncTask().execute();
+                textForRecognition = inputEditText.getText().toString();
 
-//                try {
-//                    Thread.sleep(5000);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
+                if(textForRecognition != null && !textForRecognition.equals("")) {
+                    new TextRecognitionAsyncTask().execute();
+                }
+                else{
+                    Toast.makeText(getApplicationContext(), "Please input the text for recognition", Toast.LENGTH_LONG);
+                }
 
-//                try{
 //                    sendJsonToEmail(result[0].toString(4));
-//                }catch (JSONException e){
-//                    e.printStackTrace();
-//                }
             }
         });
 
@@ -107,16 +105,34 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private class TextRecognitionAsyncTask extends AsyncTask<String, Integer, String> {
 
         @Override
+        protected void onPreExecute()
+        {
+            super.onPreExecute();
+            startRecognitionButton.setEnabled(false);
+            inputEditText.clearComposingText();
+            inputEditText.setEnabled(false);
+            resultTextView.setText("");
+        }
+
+        @Override
         protected String doInBackground(String... params) {
-            startTextRecognition("Call Teddy");
+            serverResponseJSON = startTextRecognition(textForRecognition);
             return null;
         }
-    }
 
-    @Override
-    public void onDestroy()
-    {
-        super.onDestroy();
+        @Override
+        protected void onPostExecute(String result)
+        {
+            super.onPostExecute(result);
+            startRecognitionButton.setEnabled(true);
+            inputEditText.setEnabled(true);
+            inputEditText.setText("");
+            try {
+                resultTextView.setText(serverResponseJSON.toString(4));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void sendJsonToEmail(String result){
@@ -179,7 +195,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         if( nluTextString != null ) {
             asrClient.enableTextNLU();
             asrClient.sendNluTextRequest(nluTextString);
-            System.exit(0);
         }
 
         return asrClient.serverResponseJSON;

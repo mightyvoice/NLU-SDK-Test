@@ -27,6 +27,7 @@ import java.util.UUID;
 
 import com.example.lj.asrttstest.asr.text.LatencyMonitor.Marker;
 import com.example.lj.asrttstest.info.AppInfo;
+import com.example.lj.asrttstest.info.Global;
 
 public class HttpAsrClient {
 
@@ -241,7 +242,7 @@ public class HttpAsrClient {
     // Monitor socket timeout so app properly stops listening if no speech detected or recorder timeout fails...
     private volatile Thread connectionMonitorThread = null;
     private volatile static Object connectionWaitLock = new Object();
-    protected int connectionTimeout = 60000;
+    protected int connectionTimeout = Global.CONNECTION_TIME_OUT;
     protected volatile boolean connectionTimedOut = false;
     protected volatile boolean headersSent = false;
     private volatile boolean reuseStatusCode = false;
@@ -518,6 +519,27 @@ public class HttpAsrClient {
 
             //json.put("wake_up_phrase", "Hello Joe");
 
+
+            //Ji's code to add grammar
+            /*"grammar_list": [
+            {
+            "id" : "contacts",
+            "type" : "structured_content",
+            "structured_content_category" : "contacts",
+            "checksum" : "<whatever the checksum value is from your last data upload>"
+            }
+            ]
+            */
+            JSONArray grammarArray = new JSONArray();
+            JSONObject contactGrammar = new JSONObject();
+            contactGrammar.put("id", "contacts");
+            contactGrammar.put("type", "structured_content");
+            contactGrammar.put("structured_content_category", "contacts");
+            contactGrammar.put("checksum", AppInfo.dataUploadReturnedCheckSum);
+            grammarArray.put(contactGrammar);
+            json.put("grammar_list", grammarArray);
+
+
             if( isNluEnabled() ) {
                 JSONObject appServerData = new JSONObject();
 
@@ -530,6 +552,8 @@ public class HttpAsrClient {
 
                 json.put("appserver_data", appServerData);
             }
+
+//            Log.d("sss", json.toString(4));
 
             Chunk chunk = new Chunk();
             chunk.append("--" + boundary + "\r\n");
@@ -827,7 +851,7 @@ public class HttpAsrClient {
                                 write("Final JSON Response: " + json.toString(4));
 
                                 //Ji's code
-                                return;
+//                                return;
                             } else
                                 write("Unsupported Response Format: " + json.toString(4));
                         }
@@ -865,9 +889,6 @@ public class HttpAsrClient {
 
             this.printLineSeparator();
             showLatencyMarkers();
-
-            //Ji's code
-            s.close();
 
             synchronized(waitLock) {
                 try {
@@ -984,8 +1005,7 @@ public class HttpAsrClient {
     private static void wait4TerminateSignal(int timeout) {
         synchronized(waitLock) {
             try {
-//                waitLock.wait(timeout);
-                waitLock.wait();
+                waitLock.wait(timeout);
             } catch( InterruptedException e ) {
                 e.printStackTrace();
             }
