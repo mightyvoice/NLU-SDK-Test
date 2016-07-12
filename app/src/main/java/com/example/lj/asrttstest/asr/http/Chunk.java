@@ -1,13 +1,8 @@
-package com.example.lj.asrttstest.asr.text;
+package com.example.lj.asrttstest.asr.http;
 
 /**
  * Created by lj on 16/6/30.
  */
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

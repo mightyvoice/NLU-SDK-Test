@@ -1,10 +1,9 @@
-package com.example.lj.asrttstest.asr.text;
+package com.example.lj.asrttstest.asr.http;
 
 /**
  * Created by lj on 16/6/30.
  */
 
-import android.os.AsyncTask;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -12,9 +11,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -25,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import com.example.lj.asrttstest.asr.text.LatencyMonitor.Marker;
+import com.example.lj.asrttstest.asr.http.LatencyMonitor.Marker;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.info.Global;
 
@@ -50,7 +46,7 @@ public class HttpAsrClient {
     private boolean _useTLS;
 
     /** Nuance's Production data centers use trusted root certificates. Non-production run-times such as MTL-Dev do not. */
-    private boolean _requireTrustedRootCert = true;
+    private boolean _requireTrustedRootCert = false;
 
     /** A unique identifier that enables speaker-dependent acoustic and language model adaptation within Nuance Cloud Services */
     private String _userID;
@@ -125,7 +121,7 @@ public class HttpAsrClient {
         public String LANGUAGE = "eng-USA";								// Supported language codes can be found here: http://dragonmobile.nuancemobiledeveloper.com/public/index.php?task=supportedLanguages
         public String DICTATION_TYPE = "nma_dm_main";					// This is also sometimes referred to as Topic and Language Model. Supported values are: nma_dm_main (for NLU personal assistant), Dictation, Websearch, and DTV. Please reach out to Sales or PS for available language support for a given dictation type.
         static final String UI_LANGUAGE = "en";							// The keyboard language
-        public String APPLICATION = "full.6.2";							// The name of the application configured in the NLU profile. This is unique to each customer and requires custom server-side provisioning by Nuance. The default value provided here will likely not work.
+        public String APPLICATION = AppInfo.Application;
 
         static final String CARRIER = "unknown";						// Name of your device's carrier, if applicable.
         static final String PHONE_NETWORK = "wifi";						// The device's network type

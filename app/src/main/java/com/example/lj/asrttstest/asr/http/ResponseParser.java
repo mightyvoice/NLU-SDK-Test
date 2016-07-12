@@ -1,4 +1,4 @@
-package com.example.lj.asrttstest.asr.text;
+package com.example.lj.asrttstest.asr.http;
 
 /**
  * Created by lj on 16/6/30.
@@ -8,26 +8,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.HashMap;
-import java.util.Map;
 
 //import org.apache.commons.fileupload.MultipartStream;
 //import org.apache.http.HttpEntity;
-import org.json.JSONException;
-import org.json.JSONObject;
+
 
 public class ResponseParser {
 

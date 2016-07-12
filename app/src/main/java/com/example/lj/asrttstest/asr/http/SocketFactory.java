@@ -1,4 +1,4 @@
-package com.example.lj.asrttstest.asr.text;
+package com.example.lj.asrttstest.asr.http;
 
 /**
  * Created by lj on 16/6/30.
@@ -7,7 +7,6 @@ package com.example.lj.asrttstest.asr.text;
 import com.example.lj.asrttstest.info.Global;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.KeyManagementException;
