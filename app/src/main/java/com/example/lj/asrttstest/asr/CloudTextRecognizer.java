@@ -7,19 +7,7 @@ import android.util.Log;
 
 import com.example.lj.asrttstest.asr.text.HttpAsrClient;
 import com.example.lj.asrttstest.info.AppInfo;
-import com.nuance.dragon.toolkit.cloudservices.CloudServices;
-import com.nuance.dragon.toolkit.cloudservices.DataParam;
-import com.nuance.dragon.toolkit.cloudservices.Param;
-import com.nuance.dragon.toolkit.cloudservices.Transaction;
-import com.nuance.dragon.toolkit.cloudservices.TransactionError;
-import com.nuance.dragon.toolkit.cloudservices.TransactionResult;
-import com.nuance.dragon.toolkit.cloudservices.recognizer.RecogSpec;
-import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognitionResult;
-import com.nuance.dragon.toolkit.cloudservices.recognizer.CloudRecognitionError;
-
 import org.json.JSONObject;
-
-import java.util.List;
 
 
 /**

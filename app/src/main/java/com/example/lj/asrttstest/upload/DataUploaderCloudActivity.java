@@ -119,7 +119,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
                     Log.d(TAG, "Upload Completed...");
                     JSONObject results = arg1.getContents().toJSON();
                     try {
-//                        Log.d("res", results.toString(4));
+                        Log.d("res", results.toString(4));
                         resultStatus = results
                                 .optJSONObject("value")
                                 .optJSONObject("result_list")
@@ -406,8 +406,9 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
         settings.put("utterance_number", "5");
         settings.put("audio_source", "SpeakerAndMicrophone");
 
+        Log.d("sss", settings.get("application_session_id").toString());
         //my code to set other parameters
-        settings.put("uId", AppInfo.IMEInumber);
+        settings.put("uid", AppInfo.IMEInumber);
         return settings;
     }
 
