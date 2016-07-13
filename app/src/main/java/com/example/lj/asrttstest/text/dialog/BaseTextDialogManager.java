@@ -143,7 +143,7 @@ public class BaseTextDialogManager implements IDialogManager {
      *
      * @return the actions
      */
-    private JSONArray getActions() {
+    public JSONArray getActions() {
         JSONArray actions = null;
 
         JSONObject payload = getPayload();
@@ -201,7 +201,7 @@ public class BaseTextDialogManager implements IDialogManager {
      */
     @Override
     public String parseStatus() {
-        mStatus = null;
+        mStatus = "";
         JSONObject appserverResults = getAppServerResults();
         if (appserverResults != null)
             mStatus = appserverResults.optString("status");
@@ -263,7 +263,7 @@ public class BaseTextDialogManager implements IDialogManager {
      */
     @Override
     public String parseDialogPhase() {
-        mDialogPhase = null;
+        mDialogPhase = "";
         JSONObject action = findActionByType(true);
         if (action != null)
             mDialogPhase = action.optString("dialogPhase");
@@ -284,7 +284,7 @@ public class BaseTextDialogManager implements IDialogManager {
      */
     @Override
     public String parseSystemText() {
-        mSystemText = null;
+        mSystemText = "";
         JSONObject action = findActionByType(ACTION_TYPE_CONVERSATION);
         if (action != null)
             mSystemText = action.optString("text");
@@ -305,7 +305,7 @@ public class BaseTextDialogManager implements IDialogManager {
      */
     @Override
     public String parseIntent() {
-        mIntent = null;
+        mIntent = "";
         JSONObject action = findActionByType(ACTION_TYPE_APPLICATION);
         if (action != null)
             mIntent = action.optString("action");
@@ -326,7 +326,7 @@ public class BaseTextDialogManager implements IDialogManager {
      */
     @Override
     public String parseTtsText() {
-        mTtsText= null;
+        mTtsText= "";
         JSONObject action = findActionByType(ACTION_TYPE_TTS);
         if (action != null)
             mTtsText = action.optString("text");
@@ -397,7 +397,7 @@ public class BaseTextDialogManager implements IDialogManager {
      */
     @Override
     public String parseNlpsVersion() {
-        mNlpsVersion = null;
+        mNlpsVersion = "";
 
         JSONObject payload = getPayload();
         if (payload != null)

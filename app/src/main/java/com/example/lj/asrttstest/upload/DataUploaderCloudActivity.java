@@ -160,6 +160,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
             }, 3000, true);
 
         this.mCloudServices.addTransaction(dut, 1);
+        AppInfo.dataUploadUniqueID = mCloudServices.getUniqueID();
         Log.d("sss", "Unique ID: " + mCloudServices.getUniqueID());
         dut.addParam(p);
         if(p2 != null ) dut.addParam(p2);

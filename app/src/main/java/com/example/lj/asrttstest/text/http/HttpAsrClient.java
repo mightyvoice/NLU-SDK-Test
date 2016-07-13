@@ -381,9 +381,6 @@ public class HttpAsrClient {
 
         transactionLatency.setMarker(Marker.query_complete);
 
-        //Ji's code
-//        wait4TerminateSignal(getTxnTimeout());
-
         return boundary;
 
     }
@@ -826,7 +823,10 @@ public class HttpAsrClient {
                         else if(json.has("final_response") && json.getInt("final_response") == 1) {
                             if( json.has("transcriptions") ) {
                                 write("Final Response: " + json.getJSONArray("transcriptions").getString(0));
-                                write("Final JSON Response: " + json.toString(4));
+//                                write("Final JSON Response: " + json.toString(4));
+
+                                //Ji's code
+                                serverResponseJSON = json;
 
                             }
                             else if( json.has("appserver_results") && json.getJSONObject("appserver_results").has("payload")
@@ -844,7 +844,7 @@ public class HttpAsrClient {
                                                 .getString(0) );
                                     }
                                 }
-                                write("Final JSON Response: " + json.toString(4));
+//                                write("Final JSON Response: " + json.toString(4));
 
                                 //Ji's code
 //                                return;
@@ -885,6 +885,7 @@ public class HttpAsrClient {
 
             this.printLineSeparator();
             showLatencyMarkers();
+
 
             synchronized(waitLock) {
                 try {
@@ -933,9 +934,6 @@ public class HttpAsrClient {
      *
      */
     protected void initialize() {
-//        _userID = UserIDManager.createUserIDManager().initUserID();
-//        _requestData.initApplicationSessionID();
-//        _requestData.resetUtteranceNumber();
         _userID = AppInfo.dataUploadUniqueID;
         _requestData.initApplicationSessionID();
         _requestData.resetUtteranceNumber();
@@ -1009,8 +1007,6 @@ public class HttpAsrClient {
     }
 
 
-    // ********************* REQUEST HANDLERS *********************
-
     public void sendNluTextRequest(String message) {
         this.initialize();
         _message = message;
@@ -1020,7 +1016,13 @@ public class HttpAsrClient {
         sendNluTextQueryCommands();
         sendTerminatingChunk(out, boundary);
         transactionLatency.setMarker(Marker.query_complete);
-        wait4TerminateSignal(5000);
+        wait4TerminateSignal(getTxnTimeout());
+        //Ji's code
+        try {
+            s.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void resetUserProfile() {

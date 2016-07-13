@@ -1,8 +1,11 @@
 package com.example.lj.asrttstest;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
@@ -12,7 +15,12 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.example.lj.asrttstest.dialog.CallingDomainProc;
+import com.example.lj.asrttstest.dialog.JsonParser;
+import com.example.lj.asrttstest.info.AllContactInfo;
+import com.example.lj.asrttstest.info.Global;
 import com.example.lj.asrttstest.text.CloudTextRecognizer;
+import com.example.lj.asrttstest.text.dialog.TextCallingDomain;
 import com.example.lj.asrttstest.text.dialog.TextDialogManager;
 import com.example.lj.asrttstest.text.http.HttpAsrClient;
 import com.example.lj.asrttstest.info.AppInfo;
@@ -43,6 +51,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 
     private CloudTextRecognizer cloudTextRecognizer = null;
 
+    private TTSService ttsService;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,6 +66,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         resultTextView.setMovementMethod(ScrollingMovementMethod.getInstance());
 
         AppInfo.applicationSessionID = String.valueOf(UUID.randomUUID());
+
+        ttsService = new TTSService(this);
 
         startRecognitionButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -97,12 +109,12 @@ public class NLUCloudASRActivity extends AppCompatActivity {
             if(serverResponseJSON != null) {
                 try {
                     resultTextView.setText(serverResponseJSON.toString(4));
+                    onGetDataResult(serverResponseJSON);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
             }
 
-            TextDialogManager textDialogManager = new TextDialogManager(serverResponseJSON);
         }
     }
 
@@ -119,52 +131,73 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return X.toString();
     }
 
-    private JSONObject startTextRecognition(String _text) {
-        Log.d(TAG, "startTextRecognition: " + _text);
-        String appKey = "89e9b1b619dfc7d682237e701da7ada48316f675f73c5ecd23a41fc40782bc212ed3562022c23e75214dcb9010286c23afe100e00d4464873e004d1f4c8a5883";
-        boolean useTLS = true;
-        boolean requireTrustedRootCert = false;
-        String topic = "nma_dm_main";
-        String langCode = "eng-USA";
-        boolean enableProfanityFiltering = false;
-        boolean enableNLU = true;
-        boolean resetUserProfile = false;
-        String application = AppInfo.Application;
-        String nluTextString = _text;
+    /**
+     * Process the returned json each time
+     * @param result the result
+     */
+    private void onGetDataResult(JSONObject result) {
+        String feedback = "";
+        String phoneNumber = "";
+        TextDialogManager textDialogManager = new TextDialogManager(result);
+        feedback = textDialogManager.getTtsText();
+        ttsService.performTTS(getApplicationContext(), feedback);
 
-        HttpAsrClient asrClient = new HttpAsrClient(
-                AppInfo.TextHost,
-                AppInfo.Port,
-                useTLS,
-                AppInfo.AppId,
-                appKey,
-                topic,
-                langCode );
+        String curIntent = textDialogManager.getIntent();
+        String curDialogPhase = textDialogManager.getDialogPhase();
+        String curDomain = textDialogManager.getDomain();
 
-        if( !requireTrustedRootCert )
-            asrClient.disableTrustedRootCert();
+        //calling domain process
+        if(curDomain.equals("call")){
+            TextCallingDomain callingDomain
+                    = new TextCallingDomain(getApplicationContext(), textDialogManager.getActions(), textDialogManager.getTtsText());
+            callingDomain.process();
+            phoneNumber = callingDomain.phoneNumber;
 
-        // Reset User Profile requests take precedence over any other conflicting command-line args
-        if( resetUserProfile ) {
-            asrClient.resetUserProfile();
+            //if there is ambiguty
+            if(curDialogPhase.equals("disambiguation")){
+//                ambiguityListAdapter.notifyDataSetChanged();
+                Log.d("sss", Global.ambiguityList.toString());
+            }
+
+            //if it is ready to call
+            if (curIntent.equals("call") && !phoneNumber.equals("")
+                    && ActivityCompat.checkSelfPermission(getApplicationContext(),
+                    Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+                Intent callIntent = new Intent(Intent.ACTION_CALL);
+                callIntent.setData(Uri.parse("tel:" + phoneNumber));
+                startActivity(callIntent);
+            }
         }
 
-        if( enableProfanityFiltering )	// profanity filtering is disabled by default
-            asrClient.enableProfanityFiltering();
-
-        if( !enableNLU )	// NLU is enabled by default
-            asrClient.disableNLU();
-
-        if( application != null && !application.isEmpty() )	// default application is full.6.2 which likely won't work since customer-specific provisioning is necessary :)
-            asrClient.setApplication(application);
-
-        // Command-line args indicating NLU Text mode take precedence over args for Audio
-        if( nluTextString != null ) {
-            asrClient.enableTextNLU();
-            asrClient.sendNluTextRequest(nluTextString);
-        }
-
-        return asrClient.serverResponseJSON;
+//        //message domain process
+//        if(jsonParser.getDomain().equals("messaging")) {
+//            MessageDomainProc messageDomainProc
+//                    = new MessageDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
+//            messageDomainProc.process();
+//            phoneNumber = messageDomainProc.getPhoneNumber();
+//            Log.d("sss", phoneNumber);
+//            Log.d("sss", messageDomainProc.getMessageContent());
+//
+//            //if there is ambiguity
+//            if (jsonParser.getDialogPhase().equals("disambiguation")) {
+//                ambiguityListAdapter.notifyDataSetChanged();
+//            }
+//
+//            if (jsonParser.getIntent().equals("display")) {
+//                Global.ambiguityList.clear();
+//                Log.d("sss", "message: "+messageDomainProc.getMessageContent());
+//                Global.ambiguityList.add(messageDomainProc.getMessageContent());
+//                ambiguityListAdapter.notifyDataSetChanged();
+//            }
+//
+//            //if it is ready to send the message
+//            if (jsonParser.getIntent().equals("send") &&
+//                    !phoneNumber.equals("") &&
+//                    ActivityCompat.checkSelfPermission(getApplicationContext(),
+//                            Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
+//                SmsManager smsManager = SmsManager.getDefault();
+//                smsManager.sendTextMessage(phoneNumber, null, messageDomainProc.getMessageContent(), null, null);
+//            }
+//        }
     }
-
 }
