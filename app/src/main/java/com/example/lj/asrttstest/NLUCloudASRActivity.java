@@ -11,10 +11,10 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.example.lj.asrttstest.asr.CloudTextRecognizer;
-import com.example.lj.asrttstest.asr.http.HttpAsrClient;
+import com.example.lj.asrttstest.text.CloudTextRecognizer;
+import com.example.lj.asrttstest.text.dialog.TextDialogManager;
+import com.example.lj.asrttstest.text.http.HttpAsrClient;
 import com.example.lj.asrttstest.info.AppInfo;
 
 
@@ -101,6 +101,8 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
+
+            TextDialogManager textDialogManager = new TextDialogManager(serverResponseJSON);
         }
     }
 

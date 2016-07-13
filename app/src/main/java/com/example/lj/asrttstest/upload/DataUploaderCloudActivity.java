@@ -119,7 +119,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
                     Log.d(TAG, "Upload Completed...");
                     JSONObject results = arg1.getContents().toJSON();
                     try {
-                        Log.d("res", results.toString(4));
+//                        Log.d("res", results.toString(4));
                         resultStatus = results
                                 .optJSONObject("value")
                                 .optJSONObject("result_list")
@@ -160,6 +160,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
             }, 3000, true);
 
         this.mCloudServices.addTransaction(dut, 1);
+        Log.d("sss", "Unique ID: " + mCloudServices.getUniqueID());
         dut.addParam(p);
         if(p2 != null ) dut.addParam(p2);
         dut.finish();

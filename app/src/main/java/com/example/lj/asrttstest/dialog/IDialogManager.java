@@ -7,7 +7,7 @@ import org.json.JSONObject;
  *
  * Copyright (c) 2015 Nuance Communications. All rights reserved.
  */
-interface IDialogManager {
+public interface IDialogManager {
 
     /**
      * Process server response.

@@ -1,10 +1,10 @@
-package com.example.lj.asrttstest.asr;
+package com.example.lj.asrttstest.text;
 
 /**
  * Created by lj on 16/6/29.
  */
 
-import com.example.lj.asrttstest.asr.http.HttpAsrClient;
+import com.example.lj.asrttstest.text.http.HttpAsrClient;
 import com.example.lj.asrttstest.info.AppInfo;
 import org.json.JSONObject;
 

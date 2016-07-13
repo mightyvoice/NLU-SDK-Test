@@ -1,4 +1,4 @@
-package com.example.lj.asrttstest.asr.http;
+package com.example.lj.asrttstest.text.http;
 
 /**
  * Created by lj on 16/6/30.
@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import com.example.lj.asrttstest.asr.http.LatencyMonitor.Marker;
+import com.example.lj.asrttstest.text.http.LatencyMonitor.Marker;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.info.Global;
 
@@ -936,7 +936,7 @@ public class HttpAsrClient {
 //        _userID = UserIDManager.createUserIDManager().initUserID();
 //        _requestData.initApplicationSessionID();
 //        _requestData.resetUtteranceNumber();
-        _userID = AppInfo.IMEInumber;
+        _userID = AppInfo.dataUploadUniqueID;
         _requestData.initApplicationSessionID();
         _requestData.resetUtteranceNumber();
     }
