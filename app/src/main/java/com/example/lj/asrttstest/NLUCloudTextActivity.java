@@ -186,8 +186,7 @@ public class NLUCloudTextActivity extends AppCompatActivity {
             }
 
             //if it is ready to send the message
-            if (curIntent.equals("send") &&
-                    !phoneNumber.equals("") &&
+            if (curIntent.equals("send") && !phoneNumber.equals("") &&
                     ActivityCompat.checkSelfPermission(getApplicationContext(),
                             Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
                 SmsManager smsManager = SmsManager.getDefault();
