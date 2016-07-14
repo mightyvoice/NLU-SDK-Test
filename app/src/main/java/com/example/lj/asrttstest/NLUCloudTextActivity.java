@@ -8,6 +8,7 @@ import android.os.AsyncTask;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.telephony.SmsManager;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
@@ -15,14 +16,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.example.lj.asrttstest.dialog.CallingDomainProc;
-import com.example.lj.asrttstest.dialog.JsonParser;
-import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.Global;
 import com.example.lj.asrttstest.text.CloudTextRecognizer;
 import com.example.lj.asrttstest.text.dialog.TextCallingDomain;
 import com.example.lj.asrttstest.text.dialog.TextDialogManager;
-import com.example.lj.asrttstest.text.http.HttpAsrClient;
+import com.example.lj.asrttstest.text.dialog.TextMessageDomain;
 import com.example.lj.asrttstest.info.AppInfo;
 
 
@@ -35,7 +33,7 @@ import org.json.JSONObject;
 
 import java.util.UUID;
 
-public class NLUCloudASRActivity extends AppCompatActivity {
+public class NLUCloudTextActivity extends AppCompatActivity {
 
     private final String TAG = "NLUCloud";
 
@@ -56,7 +54,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_nlu_cloud_asr);
+        setContentView(R.layout.activity_nlu_cloud_text);
         inputEditText = (EditText) findViewById(R.id.textForRecognitionView);
         startRecognitionButton = (Button) findViewById(R.id.startTextRecognitionButton);
         resultTextView = (TextView)findViewById(R.id.textRecognitionResultView);
@@ -73,7 +71,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                     textForRecognition = inputEditText.getText().toString();
-                    resultTextView.setText("");
                     new TextRecognitionAsyncTask().execute();
             }
         });
@@ -170,34 +167,32 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         }
 
 //        //message domain process
-//        if(jsonParser.getDomain().equals("messaging")) {
-//            MessageDomainProc messageDomainProc
-//                    = new MessageDomainProc(getApplicationContext(), jsonParser.getActions(), jsonParser.getTtsText());
-//            messageDomainProc.process();
-//            phoneNumber = messageDomainProc.getPhoneNumber();
-//            Log.d("sss", phoneNumber);
-//            Log.d("sss", messageDomainProc.getMessageContent());
-//
-//            //if there is ambiguity
-//            if (jsonParser.getDialogPhase().equals("disambiguation")) {
+        if(curDomain.equals("messaging")) {
+            TextMessageDomain messageDomainProc
+                    = new TextMessageDomain(getApplicationContext(), textDialogManager.getActions(), textDialogManager.getTtsText());
+            messageDomainProc.process();
+            phoneNumber = messageDomainProc.phoneNumber;
+
+            //if there is ambiguity
+            if (curDialogPhase.equals("disambiguation")) {
 //                ambiguityListAdapter.notifyDataSetChanged();
-//            }
-//
-//            if (jsonParser.getIntent().equals("display")) {
-//                Global.ambiguityList.clear();
+            }
+
+            if (curIntent.equals("display")) {
+                Global.ambiguityList.clear();
 //                Log.d("sss", "message: "+messageDomainProc.getMessageContent());
 //                Global.ambiguityList.add(messageDomainProc.getMessageContent());
 //                ambiguityListAdapter.notifyDataSetChanged();
-//            }
-//
-//            //if it is ready to send the message
-//            if (jsonParser.getIntent().equals("send") &&
-//                    !phoneNumber.equals("") &&
-//                    ActivityCompat.checkSelfPermission(getApplicationContext(),
-//                            Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
-//                SmsManager smsManager = SmsManager.getDefault();
+            }
+
+            //if it is ready to send the message
+            if (curIntent.equals("send") &&
+                    !phoneNumber.equals("") &&
+                    ActivityCompat.checkSelfPermission(getApplicationContext(),
+                            Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
+                SmsManager smsManager = SmsManager.getDefault();
 //                smsManager.sendTextMessage(phoneNumber, null, messageDomainProc.getMessageContent(), null, null);
-//            }
-//        }
+            }
+        }
     }
 }

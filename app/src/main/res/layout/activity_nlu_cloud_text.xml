@@ -7,7 +7,7 @@
     >
     <Button
         android:id="@+id/startTextRecognitionButton"
-        android:text="@string/Start_Recognition"
+        android:text="Start Text Recognition"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content" />
 

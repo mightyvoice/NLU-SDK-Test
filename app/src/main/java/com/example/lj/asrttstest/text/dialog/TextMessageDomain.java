@@ -11,6 +11,8 @@ import org.json.JSONArray;
  */
 public class TextMessageDomain extends DomainProc {
 
+    public String phoneNumber = "";
+
     public TextMessageDomain(Context _context, JSONArray _actionArray, String _ttsText) {
         super(_context, _actionArray, _ttsText);
     }

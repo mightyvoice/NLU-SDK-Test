@@ -32,7 +32,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".CloudASRActivity" />
-        <activity android:name=".NLUCloudASRActivity" />
+        <activity android:name=".NLUCloudTextActivity" />
         <activity android:name=".TTSCloudActivity" />
         <activity android:name=".upload.DataUploadActivity" />
         <activity android:name=".upload.BaseCloudActivity" />
