@@ -13,7 +13,7 @@ public class TextDialogManager extends BaseTextDialogManager {
 
     public TextDialogManager(JSONObject input){
         processServerResponse(input);
-        Log.d("haha", "##############################\n"+
+        Log.d("sss", "##############################\n"+
                 "Dialog Phase: " + getDialogPhase()+"\n"+
                 "Domain: " + getDomain()+"\n"+
                 "Intent: " + getIntent()+"\n"+

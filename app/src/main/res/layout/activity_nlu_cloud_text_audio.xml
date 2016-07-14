@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/cloudRecognizer"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+
+    <Button
+        android:id="@+id/startTextRecognitionButton"
+        android:text="Start Text Recognition"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" />
+
+    <EditText
+        android:id="@+id/textForRecognitionView"
+        android:scrollbars = "vertical"
+        android:layout_width="fill_parent"
+        android:layout_height="60dp"
+        android:textSize="20dp"
+        android:hint="Input Text for Recognition" />
+
+    <Button
+        android:id="@+id/startAudioRecognitionButton"
+        android:text="Start Audio Recognition"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" />
+    <Button
+        android:id="@+id/stopAudioRecognitionButton"
+        android:text="Stop Audio Recognition"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" />
+    <Button
+        android:id="@+id/cancelAudioRecognitionButton"
+        android:text="Cancel Audio"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" />
+
+    <TextView
+        android:id="@+id/textRecognizedView"
+        android:scrollbars = "vertical"
+        android:layout_width="fill_parent"
+        android:layout_height="60dp"
+        android:textSize="20dp"
+        android:hint="Recognized results to show ..." />
+
+    <ListView android:layout_width="fill_parent"
+        android:layout_height="180dp" android:gravity="top"
+        android:id="@+id/ambiguityListView">
+    </ListView>
+
+
+
+</LinearLayout>

@@ -44,13 +44,13 @@ public class MainActivity extends Activity {
             }
         });
 
-        final Button nluCloudRecognizerButton = (Button) findViewById(R.id.textNLUCloudRecognizerButton);
-        nluCloudRecognizerButton.setOnClickListener(new View.OnClickListener()
+        final Button audioTextNLUCloudRecognizerButton = (Button) findViewById(R.id.audioTextNLUCloudRecognizerButton);
+        audioTextNLUCloudRecognizerButton.setOnClickListener(new View.OnClickListener()
         {
             @Override
             public void onClick(View v)
             {
-                Intent localIntent = new Intent(MainActivity.this, NLUCloudTextActivity.class);
+                Intent localIntent = new Intent(MainActivity.this, NLUCloudTextAudioActivity.class);
                 MainActivity.this.startActivity(localIntent);
             }
         });
