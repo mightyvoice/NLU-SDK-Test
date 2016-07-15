@@ -75,7 +75,6 @@ import java.util.UUID;
 
 public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
-    private int DMA_GRAMMAR_VERSION = 1;
     private final String TAG = "NLUCloud";
     private static final String DEFAULT_LANGUAGE = "eng-USA";
     private static final String DEFAULT_APPSERVER_COMMAND = "DRAGON_NLU_APPSERVER_CMD";
@@ -87,8 +86,6 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
     private SpeexEncoderPipe _speexPipe;
     private EndPointerPipe _endpointerPipe;
 
-    private String _uniqueId;
-    private Data.Sequence _grammarList, _checksumList;
     private WorkerThread _workerThread;
     private JsonParser jsonParser;
     private TTSService ttsService;
@@ -377,10 +374,10 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                 requestInfo.put("appserver_data", appServerData);
 
                 // Pass grammar lists from DMA
-                if (_checksumList != null && _checksumList.size() > 0) {
-                    requestInfo.put("grammar_list", _checksumList);
-                    appServerData.put("grammar_list", _checksumList);
-                }
+//                if (_checksumList != null && _checksumList.size() > 0) {
+//                    requestInfo.put("grammar_list", _checksumList);
+//                    appServerData.put("grammar_list", _checksumList);
+//                }
 
                 List<DataParam> params = new ArrayList<DataParam>();
                 params.add(new DictionaryParam("REQUEST_INFO", requestInfo));
@@ -395,7 +392,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
      *
      * @param mAdkSubdialogListener the listener
      */
-    public void startAdkSubdialog(Transaction.Listener mAdkSubdialogListener) {
+    private void startAdkSubdialog(Transaction.Listener mAdkSubdialogListener) {
 //        initCloudServices();
         try {
             Log.e(TAG, "Inside startAdkSubdialog()");
@@ -589,14 +586,14 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
         }
     }
 
-    protected String getTimeZone() {
+    private String getTimeZone() {
         TimeZone tz = TimeZone.getDefault();
 
         Log.d(TAG, "Device timezone is: " + tz.getID());
         return tz.getID();    //tz.getDisplayName();
     }
 
-    protected String getCurrentTime() {
+    private String getCurrentTime() {
         String format = "yyyy-MM-dd'T'HH:mm:ssZ";
 
         TimeZone tz = TimeZone.getDefault();    //.getTimeZone("UTC");
@@ -611,7 +608,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
         return dateFormat.format(date);
     }
 
-    protected String getLanguage() {
+    private String getLanguage() {
         return DEFAULT_LANGUAGE;
     }
 
@@ -691,26 +688,26 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
         }
 
 //        //message domain process
-        if(curDomain.equals("messaging")) {
+        if(curDomain != null && curDomain.equals("messaging")) {
             TextMessageDomain messageDomainProc
                     = new TextMessageDomain(getApplicationContext(), textDialogManager.getActions(), textDialogManager.getTtsText());
             messageDomainProc.process();
             phoneNumber = messageDomainProc.phoneNumber;
 
             //if there is ambiguity
-            if (curDialogPhase.equals("disambiguation")) {
-//                ambiguityListAdapter.notifyDataSetChanged();
+            if (curDialogPhase != null && curDialogPhase.equals("disambiguation")) {
+                ambiguityListAdapter.notifyDataSetChanged();
             }
 
-            if (curIntent.equals("display")) {
+            if (curIntent != null && curIntent.equals("display")) {
                 Global.ambiguityList.clear();
 //                Log.d("sss", "message: "+messageDomainProc.getMessageContent());
-//                Global.ambiguityList.add(messageDomainProc.getMessageContent());
-//                ambiguityListAdapter.notifyDataSetChanged();
+                Global.ambiguityList.add(messageDomainProc.messageContent);
+                ambiguityListAdapter.notifyDataSetChanged();
             }
 
             //if it is ready to send the message
-            if (curIntent.equals("send") && !phoneNumber.equals("") &&
+            if (curIntent != null && curIntent.equals("send") && !phoneNumber.equals("") &&
                     ActivityCompat.checkSelfPermission(getApplicationContext(),
                             Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
                 SmsManager smsManager = SmsManager.getDefault();
@@ -718,7 +715,6 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
             }
         }
     }
-
 
 }
 
