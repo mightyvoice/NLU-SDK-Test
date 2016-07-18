@@ -92,8 +92,8 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
     private ArrayAdapter<String> ambiguityListAdapter;
     private EditText textInputView;
 
-    String textForRecognition = "";
-    JSONObject serverResponseJSON = null;
+    public String textForRecognition = "";
+    public JSONObject serverResponseJSON = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -705,7 +705,6 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
             if (curIntent != null && curIntent.equals("display")) {
                 Global.ambiguityList.clear();
-//                Log.d("sss", "message: "+messageDomainProc.getMessageContent());
                 Global.ambiguityList.add(messageDomainProc.messageContent);
                 ambiguityListAdapter.notifyDataSetChanged();
             }
@@ -715,7 +714,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                     ActivityCompat.checkSelfPermission(getApplicationContext(),
                             Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
                 SmsManager smsManager = SmsManager.getDefault();
-//                smsManager.sendTextMessage(phoneNumber, null, messageDomainProc.getMessageContent(), null, null);
+                smsManager.sendTextMessage(phoneNumber, null, messageDomainProc.getMessageContent(), null, null);
             }
         }
     }

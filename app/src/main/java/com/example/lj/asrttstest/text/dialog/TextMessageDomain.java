@@ -110,4 +110,7 @@ public class TextMessageDomain extends DomainProc {
         super.resetActionArray(_context, _actionArray, _ttsText);
     }
 
+    public String getMessageContent(){
+        return messageContent;
+    }
 }

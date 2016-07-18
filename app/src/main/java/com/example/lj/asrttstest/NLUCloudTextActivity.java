@@ -144,7 +144,7 @@ public class NLUCloudTextActivity extends AppCompatActivity {
         String curDomain = textDialogManager.getDomain();
 
         //calling domain process
-        if(curDomain.equals("call")){
+        if(curDomain.equals("calling")){
             TextCallingDomain callingDomain
                     = new TextCallingDomain(getApplicationContext(), textDialogManager.getActions(), textDialogManager.getTtsText());
             callingDomain.parseAllUsefulInfo();
