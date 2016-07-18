@@ -623,8 +623,9 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(String... params) {
-            if(textForRecognition != null && !textForRecognition.equals(""));
-            serverResponseJSON = new CloudTextRecognizer().startTextRecognition(textForRecognition);
+            if(textForRecognition != null && !textForRecognition.equals("")){
+                serverResponseJSON = new CloudTextRecognizer().startTextRecognition(textForRecognition);
+            }
             return null;
         }
 
