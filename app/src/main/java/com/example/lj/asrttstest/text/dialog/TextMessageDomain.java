@@ -49,7 +49,20 @@ public class TextMessageDomain extends DomainProc {
     }
 
     @Override
-    public void getAmbiguityList() {
+    protected void parseDialogPhaseDetail(){
+        dialogPhaseDetail = "";
+        JSONArray curArray = actionArray;
+        for(int i = 0; i < curArray.length(); i++){
+            JSONObject curObject = curArray.optJSONObject(i);
+            if(curObject.has("key")){
+                dialogPhaseDetail = curObject.optString("key");
+                return;
+            }
+        }
+    }
+
+    @Override
+    public void parseAmbiguityList() {
         Global.ambiguityList.clear();
         JSONArray curArray = actionArray;
         for(int i = 0; i < curArray.length(); i++){
@@ -86,9 +99,10 @@ public class TextMessageDomain extends DomainProc {
     }
 
     @Override
-    public void process() {
+    public void parseAllUsefulInfo() {
         getPhoneNumberAndMessage();
-        getAmbiguityList();
+        parseAmbiguityList();
+        parseDialogPhaseDetail();
     }
 
     @Override

@@ -19,14 +19,21 @@ public class MessageDomainProc extends DomainProc{
     private String phoneNumber = "";
     private String messageContent = "";
 
+    /* The detail state of current dialog. it has the following values:
+     * "SendMessage_SMS_Recipients_PRequest", "disambigContactManyChoices",
+     * "SendMessage_SMS_Body_PRequest", "SendMessage_SMS_PExplicitConfirm_FewRecipientsAndNotEmptyBody",
+     * "SendMessage_SMS_PExit"
+     */
+
     public MessageDomainProc(Context _context, JSONArray _actionArray, String _ttsText) {
        super(_context, _actionArray, _ttsText);
     }
 
     @Override
-    public void process() {
+    public void parseAllUsefulInfo() {
         getPhoneNumberAndMessage();
-        getAmbiguityList();
+        parseAmbiguityList();
+        parseDialogPhaseDetail();
     }
 
     private void getPhoneNumberAndMessage() {
@@ -66,7 +73,7 @@ public class MessageDomainProc extends DomainProc{
     }
 
     @Override
-    public void getAmbiguityList(){
+    protected void parseAmbiguityList(){
         Global.ambiguityList.clear();
         JSONArray curArray = actionArray;
         for(int i = 0; i < curArray.length(); i++){
@@ -96,6 +103,21 @@ public class MessageDomainProc extends DomainProc{
                     }
                 }
                 break;
+            }
+        }
+    }
+
+    @Override
+    protected void parseDialogPhaseDetail(){
+        dialogPhaseDetail = "";
+        JSONArray curArray = actionArray;
+        for(int i = 0; i < curArray.length(); i++){
+            JSONObject curObject = curArray.optJSONObject(i);
+            curObject = curObject.optJSONObject("value");
+            if(curObject.has("key")){
+                curObject = curObject.optJSONObject("key");
+                dialogPhaseDetail = curObject.optString("value");
+                return;
             }
         }
     }

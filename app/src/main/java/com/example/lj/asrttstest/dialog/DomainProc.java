@@ -14,9 +14,7 @@ public abstract class DomainProc {
     protected JSONArray actionArray = null;
     protected String ttsText = null;
     protected Context context = null;
-
-    //if there is ambuguity, put all the returned value in this list
-    public ArrayList<String> ambiguityList = null;
+    protected String dialogPhaseDetail = null;
 
     public DomainProc(Context _context, JSONArray _actionArray, String _ttsText){
         context = _context;
@@ -34,10 +32,19 @@ public abstract class DomainProc {
         return ttsText;
     }
 
+    public String getDialogPhaseDetail(){
+        return dialogPhaseDetail;
+    }
+
     //parse json to get all useful information
-    public abstract void process();
+    protected abstract void parseAllUsefulInfo();
 
     //parse json to get ambiguity list
-    public abstract void getAmbiguityList();
+    protected abstract void parseAmbiguityList();
+
+    //get the detail state of current dialog phase
+    protected abstract void parseDialogPhaseDetail();
+
+
 
 }

@@ -16,19 +16,18 @@ import java.io.InputStream;
 /**
  * Created by lj on 16/5/23.
  */
-public class JsonParser extends BaseDialogManager{
+public class AudioDialogManager extends BaseDialogManager{
 
     private JSONObject actionObject = null;
     public String textForTTS;
     public String textForDisplay;
 
-    public JsonParser(JSONObject input){
+    public AudioDialogManager(JSONObject input){
         processServerResponse(input);
         Log.d("haha", "##############################\n"+
                 "Dialog Phase: " + getDialogPhase()+"\n"+
                 "Domain: " + getDomain()+"\n"+
                 "Intent: " + getIntent()+"\n"+
-                "NlpsVersion: " + getNlpsVersion()+"\n"+
                 "Status: " + getStatus()+"\n"+
                 "System Text: " + getSystemText()+"\n"+
                 "TTS Text: " + getTtsText() + "\n"+

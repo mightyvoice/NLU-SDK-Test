@@ -28,7 +28,7 @@ public class TextCallingDomain extends DomainProc {
     }
 
     @Override
-    public void getAmbiguityList() {
+    protected void parseAmbiguityList() {
         Global.ambiguityList.clear();
         JSONArray curArray = actionArray;
         for(int i = 0; i < curArray.length(); i++){
@@ -59,14 +59,23 @@ public class TextCallingDomain extends DomainProc {
     }
 
     @Override
-    public String getTtsText() {
-        return super.getTtsText();
+    public void parseAllUsefulInfo() {
+        getContactInfo();
+        parseAmbiguityList();
+        parseDialogPhaseDetail();
     }
 
     @Override
-    public void process() {
-        getContactInfo();
-        getAmbiguityList();
+    protected void parseDialogPhaseDetail(){
+        dialogPhaseDetail = "";
+        JSONArray curArray = actionArray;
+        for(int i = 0; i < curArray.length(); i++){
+            JSONObject curObject = curArray.optJSONObject(i);
+            if(curObject.has("key")){
+                dialogPhaseDetail = curObject.optString("key");
+                return;
+            }
+        }
     }
 
     private void getContactInfo(){

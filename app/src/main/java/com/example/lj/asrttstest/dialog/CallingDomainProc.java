@@ -20,15 +20,20 @@ public class CallingDomainProc extends DomainProc {
 
     public String phoneNumber;
 
+    /* The detail state of current dialog. it has the following values:
+     * "Calling_contactRequest", "disambigContactManyChoices", "Calling_severalType"
+     * "Calling_ContactPhoneType", "Calling_Contact"
+     */
 
     public CallingDomainProc(Context _context, JSONArray _actionArray, String _ttsText) {
         super(_context, _actionArray, _ttsText);
     }
 
     @Override
-    public void process() {
+    public void parseAllUsefulInfo() {
         getPhoneNumber();
-        getAmbiguityList();
+        parseAmbiguityList();
+        parseDialogPhaseDetail();
     }
 
     private void getPhoneNumber(){
@@ -65,7 +70,22 @@ public class CallingDomainProc extends DomainProc {
     }
 
     @Override
-    public void getAmbiguityList(){
+    protected void parseDialogPhaseDetail(){
+        dialogPhaseDetail = "";
+        JSONArray curArray = actionArray;
+        for(int i = 0; i < curArray.length(); i++){
+            JSONObject curObject = curArray.optJSONObject(i);
+            curObject = curObject.optJSONObject("value");
+            if(curObject.has("key")){
+                curObject = curObject.optJSONObject("key");
+                dialogPhaseDetail = curObject.optString("value");
+                return;
+            }
+        }
+    }
+
+    @Override
+    protected void parseAmbiguityList(){
         Global.ambiguityList.clear();
         JSONArray curArray = actionArray;
         for(int i = 0; i < curArray.length(); i++){

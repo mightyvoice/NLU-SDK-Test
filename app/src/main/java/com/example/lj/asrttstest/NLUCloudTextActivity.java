@@ -147,7 +147,7 @@ public class NLUCloudTextActivity extends AppCompatActivity {
         if(curDomain.equals("call")){
             TextCallingDomain callingDomain
                     = new TextCallingDomain(getApplicationContext(), textDialogManager.getActions(), textDialogManager.getTtsText());
-            callingDomain.process();
+            callingDomain.parseAllUsefulInfo();
             phoneNumber = callingDomain.phoneNumber;
 
             //if there is ambiguty
@@ -170,7 +170,7 @@ public class NLUCloudTextActivity extends AppCompatActivity {
         if(curDomain.equals("messaging")) {
             TextMessageDomain messageDomainProc
                     = new TextMessageDomain(getApplicationContext(), textDialogManager.getActions(), textDialogManager.getTtsText());
-            messageDomainProc.process();
+            messageDomainProc.parseAllUsefulInfo();
             phoneNumber = messageDomainProc.phoneNumber;
 
             //if there is ambiguity

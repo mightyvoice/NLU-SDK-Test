@@ -17,7 +17,6 @@ public class TextDialogManager extends BaseTextDialogManager {
                 "Dialog Phase: " + getDialogPhase()+"\n"+
                 "Domain: " + getDomain()+"\n"+
                 "Intent: " + getIntent()+"\n"+
-                "NlpsVersion: " + getNlpsVersion()+"\n"+
                 "Status: " + getStatus()+"\n"+
                 "System Text: " + getSystemText()+"\n"+
                 "TTS Text: " + getTtsText() + "\n"+
