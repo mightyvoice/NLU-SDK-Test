@@ -72,11 +72,11 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
     private static final String DEFAULT_APPSERVER_COMMAND = "DRAGON_NLU_APPSERVER_CMD";
     private static final String DEFAULT_NLU_PROFILE = "REFERENCE_NCS";
 
-    private CloudServices _cloudServices;
-    private CloudRecognizer _cloudRecognizer;
-    private RecorderSource<AudioChunk> _recorder;
-    private SpeexEncoderPipe _speexPipe;
-    private EndPointerPipe _endpointerPipe;
+    private CloudServices cloudServices;
+    private CloudRecognizer cloudRecognizer;
+    private RecorderSource<AudioChunk> recorder;
+    private SpeexEncoderPipe speexPipe;
+    private EndPointerPipe endpointerPipe;
 
     private WorkerThread _workerThread;
     private AudioDialogManager audioDialogManager;
@@ -146,10 +146,10 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         // Cloud services initialization
-                        _cloudServices = CloudServices.createCloudServices(NLUCloudTextAudioActivity.this,
+                        cloudServices = CloudServices.createCloudServices(NLUCloudTextAudioActivity.this,
                                 new CloudConfig(AppInfo.Host, AppInfo.Port, AppInfo.AppId, AppInfo.AppKey,
                                         AudioType.SPEEX_WB, AudioType.SPEEX_WB));
-                        _cloudRecognizer = new CloudRecognizer(_cloudServices);
+                        cloudRecognizer = new CloudRecognizer(cloudServices);
                         startAudioRecognitionButton.setEnabled(true);
                     }
                 });
@@ -174,9 +174,9 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                 Global.ambiguityList.clear();
                 ambiguityListAdapter.notifyDataSetChanged();
 
-                _recorder = new MicrophoneRecorderSource(AudioType.PCM_16k);
-                _speexPipe = new SpeexEncoderPipe();
-                _endpointerPipe = new EndPointerPipe(new SpeechDetectionListener() {
+                recorder = new MicrophoneRecorderSource(AudioType.PCM_16k);
+                speexPipe = new SpeexEncoderPipe();
+                endpointerPipe = new EndPointerPipe(new SpeechDetectionListener() {
                     @Override
                     public void onStartOfSpeech() {
                         textRecognizedView.setText("Start of Speech...");
@@ -186,17 +186,17 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                     public void onEndOfSpeech() {
                         textRecognizedView.setText("End of Speech...");
 
-                        _cloudRecognizer.processResult();
+                        cloudRecognizer.processResult();
                         stopRecording();
                     }
                 });
 
                 // Start recording and recognition
-                _recorder.startRecording();
-                _speexPipe.connectAudioSource(_recorder);
-                _endpointerPipe.connectAudioSource(_speexPipe);
+                recorder.startRecording();
+                speexPipe.connectAudioSource(recorder);
+                endpointerPipe.connectAudioSource(speexPipe);
 
-                _cloudRecognizer.startRecognition(createCustomSpec(), _endpointerPipe, new CloudRecognizer.Listener() {
+                cloudRecognizer.startRecognition(createCustomSpec(), endpointerPipe, new CloudRecognizer.Listener() {
                     private int resultCount = 0;
 
                     @Override
@@ -254,7 +254,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                 stopAudioRecognitionButton.setEnabled(false);
                 cancelAudioRecognitionButton.setEnabled(true);
 
-                _cloudRecognizer.processResult();
+                cloudRecognizer.processResult();
                 stopRecording();
             }
         });
@@ -265,7 +265,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                 startAudioRecognitionButton.setEnabled(false);
                 stopAudioRecognitionButton.setEnabled(false);
                 cancelAudioRecognitionButton.setEnabled(false);
-                _cloudRecognizer.cancel();
+                cloudRecognizer.cancel();
                 stopRecording();
             }
         });
@@ -275,17 +275,17 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
     public void onDestroy() {
         super.onDestroy();
 
-        if (_cloudRecognizer != null)
-            _cloudRecognizer.cancel();
-        _cloudRecognizer = null;
+        if (cloudRecognizer != null)
+            cloudRecognizer.cancel();
+        cloudRecognizer = null;
 
-        if (_recorder != null)
-            _recorder.stopRecording();
-        _recorder = null;
+        if (recorder != null)
+            recorder.stopRecording();
+        recorder = null;
 
-        if (_cloudServices != null)
-            _cloudServices.release();
-        _cloudServices = null;
+        if (cloudServices != null)
+            cloudServices.release();
+        cloudServices = null;
     }
 
     private void sendJsonToEmail(String result) {
@@ -309,19 +309,19 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
     }
 
     private void stopRecording() {
-        if (_endpointerPipe != null) {
-            _endpointerPipe.disconnectAudioSource();
-            _endpointerPipe = null;
+        if (endpointerPipe != null) {
+            endpointerPipe.disconnectAudioSource();
+            endpointerPipe = null;
         }
 
-        if (_speexPipe != null) {
-            _speexPipe.disconnectAudioSource();
-            _speexPipe = null;
+        if (speexPipe != null) {
+            speexPipe.disconnectAudioSource();
+            speexPipe = null;
         }
 
-        if (_recorder != null) {
-            _recorder.stopRecording();
-            _recorder = null;
+        if (recorder != null) {
+            recorder.stopRecording();
+            recorder = null;
         }
     }
 
@@ -458,7 +458,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 //            Log.d(TAG, "requestInfo: " + RequestInfo.toString());
 
 //            this.mCloudServices.addTransaction(dut, 1);
-            _cloudServices.addTransaction(dut, 1);
+            cloudServices.addTransaction(dut, 1);
             dut.addParam(RequestInfo);
             dut.finish();
 
