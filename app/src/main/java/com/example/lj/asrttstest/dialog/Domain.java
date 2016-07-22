@@ -10,13 +10,13 @@ import java.util.ArrayList;
 /**
  * Created by lj on 16/6/16.
  */
-public abstract class DomainProc {
+public abstract class Domain {
     protected JSONArray actionArray = null;
     protected String ttsText = null;
     protected Context context = null;
     protected String dialogPhaseDetail = null;
 
-    public DomainProc(Context _context, JSONArray _actionArray, String _ttsText){
+    public Domain(Context _context, JSONArray _actionArray, String _ttsText){
         context = _context;
         actionArray = _actionArray;
         ttsText = _ttsText;
@@ -41,10 +41,6 @@ public abstract class DomainProc {
 
     //parse json to get ambiguity list
     protected abstract void parseAmbiguityList();
-
-    //get the detail state of current dialog phase
-    protected abstract void parseDialogPhaseDetail();
-
 
 
 }

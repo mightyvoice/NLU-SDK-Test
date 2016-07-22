@@ -2,7 +2,7 @@ package com.example.lj.asrttstest.text.dialog;
 
 import android.content.Context;
 
-import com.example.lj.asrttstest.dialog.DomainProc;
+import com.example.lj.asrttstest.dialog.Domain;
 import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.Global;
 
@@ -12,7 +12,7 @@ import org.json.JSONObject;
 /**
  * Created by lj on 16/7/13.
  */
-public class TextMessageDomain extends DomainProc {
+public class TextMessageDomain extends Domain {
     public String phoneNumber = null;
     public String messageContent = null;
     private String phoneNumberID = null;
@@ -44,19 +44,6 @@ public class TextMessageDomain extends DomainProc {
             if (curObject.has("body")) {
                 messageContent = curObject.optString("body");
                 break;
-            }
-        }
-    }
-
-    @Override
-    protected void parseDialogPhaseDetail(){
-        dialogPhaseDetail = "";
-        JSONArray curArray = actionArray;
-        for(int i = 0; i < curArray.length(); i++){
-            JSONObject curObject = curArray.optJSONObject(i);
-            if(curObject.has("key")){
-                dialogPhaseDetail = curObject.optString("key");
-                return;
             }
         }
     }
@@ -102,7 +89,6 @@ public class TextMessageDomain extends DomainProc {
     public void parseAllUsefulInfo() {
         getPhoneNumberAndMessage();
         parseAmbiguityList();
-        parseDialogPhaseDetail();
     }
 
     @Override

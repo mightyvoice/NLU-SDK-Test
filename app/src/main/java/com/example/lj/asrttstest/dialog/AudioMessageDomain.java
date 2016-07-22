@@ -1,7 +1,6 @@
 package com.example.lj.asrttstest.dialog;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.Global;
@@ -9,13 +8,11 @@ import com.example.lj.asrttstest.info.Global;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-
 /**
  * Created by lj on 16/6/16.
  */
-public class MessageDomainProc extends DomainProc{
-    private static final String TAG = "MessageDomainProc";
+public class AudioMessageDomain extends Domain {
+    private static final String TAG = "AudioMessageDomain";
     private String phoneNumber = "";
     private String messageContent = "";
 
@@ -25,7 +22,7 @@ public class MessageDomainProc extends DomainProc{
      * "SendMessage_SMS_PExit"
      */
 
-    public MessageDomainProc(Context _context, JSONArray _actionArray, String _ttsText) {
+    public AudioMessageDomain(Context _context, JSONArray _actionArray, String _ttsText) {
        super(_context, _actionArray, _ttsText);
     }
 
@@ -33,7 +30,6 @@ public class MessageDomainProc extends DomainProc{
     public void parseAllUsefulInfo() {
         getPhoneNumberAndMessage();
         parseAmbiguityList();
-        parseDialogPhaseDetail();
     }
 
     private void getPhoneNumberAndMessage() {
@@ -103,21 +99,6 @@ public class MessageDomainProc extends DomainProc{
                     }
                 }
                 break;
-            }
-        }
-    }
-
-    @Override
-    protected void parseDialogPhaseDetail(){
-        dialogPhaseDetail = "";
-        JSONArray curArray = actionArray;
-        for(int i = 0; i < curArray.length(); i++){
-            JSONObject curObject = curArray.optJSONObject(i);
-            curObject = curObject.optJSONObject("value");
-            if(curObject.has("key")){
-                curObject = curObject.optJSONObject("key");
-                dialogPhaseDetail = curObject.optString("value");
-                return;
             }
         }
     }

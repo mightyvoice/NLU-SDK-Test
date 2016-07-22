@@ -1,7 +1,6 @@
 package com.example.lj.asrttstest.dialog;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.Global;
@@ -9,14 +8,12 @@ import com.example.lj.asrttstest.info.Global;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-
 /**
  * Created by lj on 16/6/16.
  */
-public class CallingDomainProc extends DomainProc {
+public class AudioCallingDomain extends Domain {
 
-    private static final String TAG = "CallingDomainProc";
+    private static final String TAG = "AudioCallingDomain";
 
     public String phoneNumber;
 
@@ -25,7 +22,7 @@ public class CallingDomainProc extends DomainProc {
      * "Calling_ContactPhoneType", "Calling_Contact"
      */
 
-    public CallingDomainProc(Context _context, JSONArray _actionArray, String _ttsText) {
+    public AudioCallingDomain(Context _context, JSONArray _actionArray, String _ttsText) {
         super(_context, _actionArray, _ttsText);
     }
 
@@ -33,7 +30,6 @@ public class CallingDomainProc extends DomainProc {
     public void parseAllUsefulInfo() {
         getPhoneNumber();
         parseAmbiguityList();
-        parseDialogPhaseDetail();
     }
 
     private void getPhoneNumber(){
@@ -69,20 +65,7 @@ public class CallingDomainProc extends DomainProc {
         }
     }
 
-    @Override
-    protected void parseDialogPhaseDetail(){
-        dialogPhaseDetail = "";
-        JSONArray curArray = actionArray;
-        for(int i = 0; i < curArray.length(); i++){
-            JSONObject curObject = curArray.optJSONObject(i);
-            curObject = curObject.optJSONObject("value");
-            if(curObject.has("key")){
-                curObject = curObject.optJSONObject("key");
-                dialogPhaseDetail = curObject.optString("value");
-                return;
-            }
-        }
-    }
+
 
     @Override
     protected void parseAmbiguityList(){

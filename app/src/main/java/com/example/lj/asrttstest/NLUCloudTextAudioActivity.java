@@ -21,9 +21,9 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.example.lj.asrttstest.dialog.CallingDomainProc;
-import com.example.lj.asrttstest.dialog.AudioDialogManager;
-import com.example.lj.asrttstest.dialog.MessageDomainProc;
+import com.example.lj.asrttstest.dialog.AudioCallingDomain;
+import com.example.lj.asrttstest.dialog.AudioDialogManagerAudio;
+import com.example.lj.asrttstest.dialog.AudioMessageDomain;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.info.Global;
 import com.example.lj.asrttstest.text.CloudTextRecognizer;
@@ -79,7 +79,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
     private EndPointerPipe endpointerPipe;
 
     private WorkerThread _workerThread;
-    private AudioDialogManager audioDialogManager;
+    private AudioDialogManagerAudio audioDialogManager;
     private TTSService ttsService;
 
     private Button startAudioRecognitionButton;
@@ -507,30 +507,30 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
     /**
      * Process the returned json each time
-     *
      * @param result the result
      */
     private void onGetDataResultFromAudioRecognizer(JSONObject result) {
 //        try {
 //            sendJsonToEmail(result.toString(4));
+////            Log.d("sss", result.toString(4));
 //        } catch (JSONException e) {
 //            e.printStackTrace();
 //        }
         String feedback = "";
         String phoneNumber = "";
-        audioDialogManager = new AudioDialogManager(result);
+        audioDialogManager = new AudioDialogManagerAudio(result);
         feedback = audioDialogManager.getTtsText();
         ttsService.performTTS(getApplicationContext(), feedback);
         showResults(textRecognizedView, feedback);
 
         //calling domain process
         if (audioDialogManager.getDomain().equals("calling")) {
-            CallingDomainProc callingDomain
-                    = new CallingDomainProc(getApplicationContext(), audioDialogManager.getActions(), audioDialogManager.getTtsText());
+            AudioCallingDomain callingDomain
+                    = new AudioCallingDomain(getApplicationContext(), audioDialogManager.getActions(), audioDialogManager.getTtsText());
             callingDomain.parseAllUsefulInfo();
             phoneNumber = callingDomain.phoneNumber;
-            Log.d("sss", callingDomain.getDialogPhaseDetail());
-            textRecognizedView.setText(callingDomain.getDialogPhaseDetail());
+            Log.d("sss", audioDialogManager.getDialogPhaseDetail());
+            textRecognizedView.setText(audioDialogManager.getDialogPhaseDetail());
 
             //if there is ambiguty
             if (audioDialogManager.getDialogPhase().equals("disambiguation")) {
@@ -548,14 +548,14 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
         //message domain process
         if (audioDialogManager.getDomain().equals("messaging")) {
-            MessageDomainProc messageDomainProc
-                    = new MessageDomainProc(getApplicationContext(), audioDialogManager.getActions(), audioDialogManager.getTtsText());
-            messageDomainProc.parseAllUsefulInfo();
-            phoneNumber = messageDomainProc.getPhoneNumber();
+            AudioMessageDomain audioMessageDomain
+                    = new AudioMessageDomain(getApplicationContext(), audioDialogManager.getActions(), audioDialogManager.getTtsText());
+            audioMessageDomain.parseAllUsefulInfo();
+            phoneNumber = audioMessageDomain.getPhoneNumber();
             Log.d("sss", phoneNumber);
-            Log.d("sss", messageDomainProc.getMessageContent());
-            Log.d("sss", messageDomainProc.getDialogPhaseDetail());
-            textRecognizedView.setText(messageDomainProc.getDialogPhaseDetail());
+            Log.d("sss", audioMessageDomain.getMessageContent());
+            Log.d("sss", audioDialogManager.getDialogPhaseDetail());
+            textRecognizedView.setText(audioDialogManager.getDialogPhaseDetail());
 
             //if there is ambiguity
             if (audioDialogManager.getDialogPhase().equals("disambiguation")) {
@@ -564,8 +564,8 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
             if (audioDialogManager.getIntent().equals("display")) {
                 Global.ambiguityList.clear();
-                Log.d("sss", "message: " + messageDomainProc.getMessageContent());
-                Global.ambiguityList.add(messageDomainProc.getMessageContent());
+                Log.d("sss", "message: " + audioMessageDomain.getMessageContent());
+                Global.ambiguityList.add(audioMessageDomain.getMessageContent());
                 ambiguityListAdapter.notifyDataSetChanged();
             }
 
@@ -575,7 +575,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                     ActivityCompat.checkSelfPermission(getApplicationContext(),
                             Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
                 SmsManager smsManager = SmsManager.getDefault();
-                smsManager.sendTextMessage(phoneNumber, null, messageDomainProc.getMessageContent(), null, null);
+                smsManager.sendTextMessage(phoneNumber, null, audioMessageDomain.getMessageContent(), null, null);
             }
         }
     }
@@ -671,8 +671,8 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
             callingDomain.parseAllUsefulInfo();
             phoneNumber = callingDomain.phoneNumber;
 
-            Log.d("sss", callingDomain.getDialogPhaseDetail());
-            textRecognizedView.setText(callingDomain.getDialogPhaseDetail());
+            Log.d("sss", textDialogManager.getDialogPhaseDetail());
+            textRecognizedView.setText(textDialogManager.getDialogPhaseDetail());
 
             //if there is ambiguty
             if(curDialogPhase != null && curDialogPhase.equals("disambiguation")){
@@ -695,8 +695,8 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                     = new TextMessageDomain(getApplicationContext(), textDialogManager.getActions(), textDialogManager.getTtsText());
             messageDomainProc.parseAllUsefulInfo();
             phoneNumber = messageDomainProc.phoneNumber;
-            Log.d("sss", messageDomainProc.getDialogPhaseDetail());
-            textRecognizedView.setText(messageDomainProc.getDialogPhaseDetail());
+            Log.d("sss", textDialogManager.getDialogPhaseDetail());
+            textRecognizedView.setText(textDialogManager.getDialogPhaseDetail());
 
             //if there is ambiguity
             if (curDialogPhase != null && curDialogPhase.equals("disambiguation")) {

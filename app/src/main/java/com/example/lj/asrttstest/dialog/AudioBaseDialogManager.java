@@ -1,22 +1,17 @@
-package com.example.lj.asrttstest.text.dialog;
-
-/**
- * Created by lj on 16/7/13.
- */
-
-import com.example.lj.asrttstest.dialog.DialogResult;
-import com.example.lj.asrttstest.dialog.IDialogManager;
-import com.example.lj.asrttstest.dialog.IDialogResult;
+package com.example.lj.asrttstest.dialog;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * Created by lj on 16/7/13.
+ * AudioBaseDialogManager provides access to the core NCS Ref NLU JSON response data and it's dialog elements
+ *
+ * Copyright (c) 2015 Nuance Communications. All rights reserved.
  */
-public class BaseTextDialogManager implements IDialogManager {
+public class AudioBaseDialogManager implements IDialogManager {
+
     /** Dialog Phase is returned in the NCS Ref NLU JSON Response. topLevel let's the client know that the dialog is complete and it should reset dialog management after processing the response. */
-    private static final String DIALOG_PHASE_TOP_LEVEL				= "topLevel";
+    protected static final String DIALOG_PHASE_TOP_LEVEL				= "topLevel";
 
     /** Dialog Phase is returned in the NCS Ref NLU JSON Response. informationRequest informs the client that the dialog is not complete and the user needs to be prompted for more information. */
     protected static final String DIALOG_PHASE_INFORMATION_REQUEST		= "informationRequest";
@@ -28,64 +23,66 @@ public class BaseTextDialogManager implements IDialogManager {
     protected static final String DIALOG_PHASE_CONFIRMATION				= "confirmation";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. dmState contains details about the dialog phase and request status. */
-    private static final String ACTION_TYPE_DMSTATE					= "dmState";
+    protected static final String ACTION_TYPE_DMSTATE					= "dmState";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. conversation contains UI prompt details. */
-    private static final String ACTION_TYPE_CONVERSATION				= "conversation";
+    protected static final String ACTION_TYPE_CONVERSATION				= "conversation";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. tts contains TTS prompt details. */
-    private static final String ACTION_TYPE_TTS						= "tts";
+    protected static final String ACTION_TYPE_TTS						= "tts";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. domain contains NLU domain details. */
-    private static final String ACTION_TYPE_DOMAIN					= "domain";
+    protected static final String ACTION_TYPE_DOMAIN					= "domain";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. application contains details about the target application for the selected domain */
-    private static final String ACTION_TYPE_APPLICATION				= "application";
+    protected static final String ACTION_TYPE_APPLICATION				= "application";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. reset informs the client to send a reset request to the server. */
-    private static final String ACTION_TYPE_RESET						= "reset";
+    protected static final String ACTION_TYPE_RESET						= "reset";
 
     /** Action type is returned in the NCS Ref NLU JSON Response. get_data informs the client that a data exchange between client and server is required, and specifies the parameters involved. */
-    private static final String ACTION_TYPE_GETDATA					= "get_data";
+    protected static final String ACTION_TYPE_GETDATA					= "get_data";
 
     /** The NCS server response represented as a String. */
     protected String serverResponse = null;
 
     /** The NCS Server response represented as a JSON object. */
-    private JSONObject mJsonResponse = null;
+    protected JSONObject mJsonResponse = null;
 
     /** The status value returned in the NCS response. */
-    private String mStatus 				= null;
+    protected String mStatus 				= null;
 
     /** The value of final_response returned in the NCS response. */
-    private int mFinalResponse 			= 0;
+    protected int mFinalResponse 			= 0;
 
     /** The NLU domain returned in the NCS response. */
-    private String mDomain 				= null;
+    protected String mDomain 				= null;
 
     /** The dialog phase returned in the NCS response. */
-    private String mDialogPhase 			= null;
+    protected String mDialogPhase 			= null;
 
     /** The system text returned in the NCS response to be displayed in the UI. */
-    private String mSystemText			= null;
+    protected String mSystemText			= null;
 
     /** The tts text returned in the NCS response to be played back to the user. */
-    private String mTtsText				= null;
+    protected String mTtsText				= null;
 
     /** A flag to track if the server has requested the dialog be reset. */
-    private boolean mResetDialog			= false;
+    protected boolean mResetDialog			= false;
 
     /** The NLU intent returned in the NCS response. */
-    private String mIntent				= null;
+    protected String mIntent				= null;
 
     /** An instance of the get_data JSON object returned in the NCS response. */
-    private JSONObject mGetData			= null;
+    protected JSONObject mGetData			= null;
 
     /** The version of the NLPS server that handled the request. */
-    private String mNlpsVersion			= null;
+    protected String mNlpsVersion			= null;
 
     /** An instance of the server_specified_settings returned in the NCS response. The client must use these in the follow-up transaction. */
-    private JSONObject mServerSpecifiedSettings	= null;
+    protected JSONObject mServerSpecifiedSettings	= null;
+
+    protected JSONObject mAppServerResult = null;
 
 
     /* (non-Javadoc)
@@ -94,7 +91,7 @@ public class BaseTextDialogManager implements IDialogManager {
     @Override
     public IDialogResult processServerResponse(JSONObject response) {
         mJsonResponse = response;
-
+        mAppServerResult = getAppServerResults();
         mStatus = parseStatus();
         mFinalResponse = parseFinalResponse();
         mDomain = parseDomain();
@@ -106,8 +103,6 @@ public class BaseTextDialogManager implements IDialogManager {
         mGetData = parseGetData();
         mNlpsVersion = parseNlpsVersion();
         mServerSpecifiedSettings = parseServerSpecifiedSettings();
-
-		/* The dialog result. */
         return new DialogResult(mTtsText, mSystemText, isFinalResponse(), continueDialog(), mDialogPhase);
     }
 
@@ -116,10 +111,14 @@ public class BaseTextDialogManager implements IDialogManager {
      *
      * @return the app server results
      */
-    private JSONObject getAppServerResults() {
-        if( mJsonResponse != null )
-            return mJsonResponse.optJSONObject("appserver_results");
-
+    protected JSONObject getAppServerResults() {
+        if (mJsonResponse != null) {
+            mAppServerResult = mJsonResponse
+                    .optJSONObject("value")
+                    .optJSONObject("appserver_results")
+                    .optJSONObject("value");
+            return mAppServerResult;
+        }
         return null;
     }
 
@@ -128,12 +127,13 @@ public class BaseTextDialogManager implements IDialogManager {
      *
      * @return the payload
      */
-    private JSONObject getPayload() {
+    protected JSONObject getPayload() {
         JSONObject payload = null;
 
-        JSONObject appserverResults = getAppServerResults();
-        if (appserverResults != null)
-            payload = appserverResults.optJSONObject("payload");
+        if (mAppServerResult != null)
+            payload = mAppServerResult
+                    .optJSONObject("payload")
+                    .optJSONObject("value");
 
         return payload;
     }
@@ -145,10 +145,10 @@ public class BaseTextDialogManager implements IDialogManager {
      */
     public JSONArray getActions() {
         JSONArray actions = null;
-
         JSONObject payload = getPayload();
         if (payload != null)
-            actions = payload.optJSONArray("actions");
+            actions = payload.optJSONObject("actions")
+                    .optJSONArray("value");
 
         return actions;
     }
@@ -159,13 +159,12 @@ public class BaseTextDialogManager implements IDialogManager {
      * @param t the action type name
      * @return the action as a JSON object
      */
-    private JSONObject findActionByType(String t) {
+    protected JSONObject findActionByType(String t) {
         JSONArray actions = getActions();
         if (actions == null) return null;
-
         for(int i = 0; i < actions.length(); i++){
-            JSONObject o = actions.optJSONObject(i);
-            String oType = o.optString("type");
+            JSONObject o = actions.optJSONObject(i).optJSONObject("value");
+            String oType = o.optJSONObject("type").optString("value");
 
             if( oType.equalsIgnoreCase(t)) return o;
         }
@@ -176,21 +175,22 @@ public class BaseTextDialogManager implements IDialogManager {
     /**
      * Find action by type.
      *
-     * @param searchFromBottom this flag specifies whether or not to search for the action in the server response from bottom up or top down
+     * @param searchFromBottom this flag specifies whether or not to search for
+     *                         the action in the server response from bottom up or top down
      * @return the JSON object
      */
-    private JSONObject findActionByType(boolean searchFromBottom) {
+    protected JSONObject findActionByType(boolean searchFromBottom) {
         if( !searchFromBottom )
-            return findActionByType(ACTION_TYPE_DMSTATE);
+            return findActionByType(AudioBaseDialogManager.ACTION_TYPE_DMSTATE);
 
         JSONArray actions = getActions();
         if (actions == null) return null;
 
         for(int i = actions.length(); i > 0; i--){
-            JSONObject o = actions.optJSONObject(i-1);
-            String oType = o.optString("type");
+            JSONObject o = actions.optJSONObject(i-1).optJSONObject("value");
+            String oType = o.optJSONObject("type").optString("value");
 
-            if( oType.equalsIgnoreCase(ACTION_TYPE_DMSTATE)) return o;
+            if( oType.equalsIgnoreCase(AudioBaseDialogManager.ACTION_TYPE_DMSTATE)) return o;
         }
 
         return null;
@@ -201,10 +201,9 @@ public class BaseTextDialogManager implements IDialogManager {
      */
     @Override
     public String parseStatus() {
-        mStatus = "";
-        JSONObject appserverResults = getAppServerResults();
-        if (appserverResults != null)
-            mStatus = appserverResults.optString("status");
+        mStatus = null;
+        if (mAppServerResult != null)
+            mStatus = mAppServerResult.optJSONObject("status").optString("value");
 
         return mStatus;
     }
@@ -223,8 +222,8 @@ public class BaseTextDialogManager implements IDialogManager {
     @Override
     public int parseFinalResponse() {
         mFinalResponse = 0;
-        if (mJsonResponse != null)
-            mFinalResponse = mJsonResponse.optInt("final_response");
+        if (mAppServerResult != null)
+            mFinalResponse = mAppServerResult.optJSONObject("final_response").optInt("value");
 
         return mFinalResponse;
     }
@@ -238,14 +237,14 @@ public class BaseTextDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseDomain()
+     * @see com.nuance.dragon.toolkit.sample.IDialogManager
      */
     @Override
     public String parseDomain() {
         mDomain = null;
-        JSONObject action = findActionByType(ACTION_TYPE_DOMAIN);
+        JSONObject action = findActionByType(AudioBaseDialogManager.ACTION_TYPE_DOMAIN);
         if (action != null)
-            mDomain = action.optString("app");
+            mDomain = action.optJSONObject("app").optString("value");
 
         return mDomain;
     }
@@ -266,7 +265,7 @@ public class BaseTextDialogManager implements IDialogManager {
         mDialogPhase = "";
         JSONObject action = findActionByType(true);
         if (action != null)
-            mDialogPhase = action.optString("dialogPhase");
+            mDialogPhase = action.optJSONObject("dialogPhase").optString("value");
 
         return mDialogPhase;
     }
@@ -284,10 +283,10 @@ public class BaseTextDialogManager implements IDialogManager {
      */
     @Override
     public String parseSystemText() {
-        mSystemText = "";
-        JSONObject action = findActionByType(ACTION_TYPE_CONVERSATION);
+        mSystemText = null;
+        JSONObject action = findActionByType(AudioBaseDialogManager.ACTION_TYPE_CONVERSATION);
         if (action != null)
-            mSystemText = action.optString("text");
+            mSystemText = action.optJSONObject("text").optString("value");
 
         return mSystemText;
     }
@@ -306,9 +305,9 @@ public class BaseTextDialogManager implements IDialogManager {
     @Override
     public String parseIntent() {
         mIntent = "";
-        JSONObject action = findActionByType(ACTION_TYPE_APPLICATION);
+        JSONObject action = findActionByType(AudioBaseDialogManager.ACTION_TYPE_APPLICATION);
         if (action != null)
-            mIntent = action.optString("action");
+            mIntent = action.optJSONObject("action").optString("value");
 
         return mIntent;
     }
@@ -326,10 +325,10 @@ public class BaseTextDialogManager implements IDialogManager {
      */
     @Override
     public String parseTtsText() {
-        mTtsText= "";
-        JSONObject action = findActionByType(ACTION_TYPE_TTS);
+        mTtsText= null;
+        JSONObject action = findActionByType(AudioBaseDialogManager.ACTION_TYPE_TTS);
         if (action != null)
-            mTtsText = action.optString("text");
+            mTtsText = action.optJSONObject("text").optString("value");
 
         return mTtsText;
     }
@@ -348,7 +347,7 @@ public class BaseTextDialogManager implements IDialogManager {
     @Override
     public boolean parseResetDialog() {
         mResetDialog = false;
-        JSONObject action = findActionByType(ACTION_TYPE_RESET);
+        JSONObject action = findActionByType(AudioBaseDialogManager.ACTION_TYPE_RESET);
         if (action != null)
             mResetDialog = true;
 
@@ -377,7 +376,7 @@ public class BaseTextDialogManager implements IDialogManager {
     @Override
     public JSONObject parseGetData() {
         mGetData = null;
-        JSONObject action = findActionByType(ACTION_TYPE_GETDATA);
+        JSONObject action = findActionByType(AudioBaseDialogManager.ACTION_TYPE_GETDATA);
         if (action != null)
             mGetData = action;	//action.optJSONObject("payload");
 
@@ -397,11 +396,11 @@ public class BaseTextDialogManager implements IDialogManager {
      */
     @Override
     public String parseNlpsVersion() {
-        mNlpsVersion = "";
+        mNlpsVersion = null;
 
         JSONObject payload = getPayload();
         if (payload != null)
-            mNlpsVersion = payload.optString("nlps_version");
+            mNlpsVersion = payload.optJSONObject("nlps_version").optString("value");
 
         return mNlpsVersion;
     }
