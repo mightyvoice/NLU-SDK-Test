@@ -290,7 +290,8 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
     private void sendJsonToEmail(String result) {
         Intent data = new Intent(Intent.ACTION_SENDTO);
-        data.setData(Uri.parse("mailto:rpbloom@gmail.com"));
+        data.setData(Uri.parse("mailto:zijufeng@tcl.com"));
+//        data.setData(Uri.parse("mailto:rpbloom@gmail.com"));
         data.putExtra(Intent.EXTRA_SUBJECT, "这是标题");
         data.putExtra(Intent.EXTRA_TEXT, result);
         startActivity(data);
@@ -454,9 +455,6 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
                 }, 3000, true);
 
-//            Log.d(TAG, "settings: " + settings.toString());
-//            Log.d(TAG, "requestInfo: " + RequestInfo.toString());
-
 //            this.mCloudServices.addTransaction(dut, 1);
             cloudServices.addTransaction(dut, 1);
             dut.addParam(RequestInfo);
@@ -510,12 +508,12 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
      * @param result the result
      */
     private void onGetDataResultFromAudioRecognizer(JSONObject result) {
-//        try {
-//            sendJsonToEmail(result.toString(4));
-////            Log.d("sss", result.toString(4));
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            sendJsonToEmail(result.toString(4));
+//            Log.d("sss", result.toString(4));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         String feedback = "";
         String phoneNumber = "";
         audioDialogManager = new AudioDialogManagerAudio(result);
