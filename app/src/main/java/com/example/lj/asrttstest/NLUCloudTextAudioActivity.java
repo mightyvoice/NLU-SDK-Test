@@ -22,7 +22,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.example.lj.asrttstest.dialog.AudioCallingDomain;
-import com.example.lj.asrttstest.dialog.AudioDialogManagerAudio;
+import com.example.lj.asrttstest.dialog.AudioDialogManager;
 import com.example.lj.asrttstest.dialog.AudioMessageDomain;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.info.Global;
@@ -79,7 +79,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
     private EndPointerPipe endpointerPipe;
 
     private WorkerThread _workerThread;
-    private AudioDialogManagerAudio audioDialogManager;
+    private AudioDialogManager audioDialogManager;
     private TTSService ttsService;
 
     private Button startAudioRecognitionButton;
@@ -516,7 +516,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
         }
         String feedback = "";
         String phoneNumber = "";
-        audioDialogManager = new AudioDialogManagerAudio(result);
+        audioDialogManager = new AudioDialogManager(result);
         feedback = audioDialogManager.getTtsText();
         ttsService.performTTS(getApplicationContext(), feedback);
         showResults(textRecognizedView, feedback);
