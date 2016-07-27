@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.provider.ContactsContract;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
 import android.view.View;
@@ -24,7 +23,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Set;
-import java.util.UUID;
 
 public class MainActivity extends Activity {
 
@@ -63,7 +61,7 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v)
             {
-                Intent localIntent = new Intent(MainActivity.this, TTSCloudActivity.class);
+                Intent localIntent = new Intent(MainActivity.this, GoogleASRActivity.class);
                 MainActivity.this.startActivity(localIntent);
             }
         });

@@ -1,10 +1,15 @@
 package com.example.lj.asrttstest;
 
 import android.app.Activity;
+import android.app.SearchManager;
+import android.content.Intent;
+import android.speech.RecognizerIntent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -26,6 +31,7 @@ import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 /////////test git
 import com.example.lj.asrttstest.info.AppInfo;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
@@ -54,6 +60,8 @@ import com.nuance.dragon.toolkit.util.Logger;
 
 public class CloudASRActivity extends AppCompatActivity
 {
+    private static  final int VOICE_RECOGNITION_REQUEST_CODE = 1001;
+
     private CloudServices      _cloudServices;
     private CloudRecognizer    _cloudRecognizer;
     private RecorderSource<AudioChunk>     _recorder;
@@ -67,6 +75,8 @@ public class CloudASRActivity extends AppCompatActivity
 
     private boolean _speexEnabled;
 
+    private TextView resultEditText;
+
     /**
      * Called when the activity is first created.
      */
@@ -78,7 +88,7 @@ public class CloudASRActivity extends AppCompatActivity
         setContentView(R.layout.activity_cloud_asr);
 
         // UI initialization
-        final TextView resultEditText = (TextView)findViewById(R.id.cloudResultEditText);
+        resultEditText = (TextView)findViewById(R.id.cloudResultEditText);
         final Button startRecognitionButton = (Button) findViewById(R.id.startCloudRecognitionButton);
         final Button stopRecognitionButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
         final Button cancelButton = (Button) findViewById(R.id.cancelCloudRecognitionButton);
@@ -126,17 +136,16 @@ public class CloudASRActivity extends AppCompatActivity
                 startRecognitionButton.setEnabled(false);
                 stopRecognitionButton.setEnabled(true);
                 cancelButton.setEnabled(true);
+                resultEditText.setText("");
 
                 String resultmodeName = resultModeSpinner.getSelectedItem().toString();
 
                 // Set-up audio chaining
                 _recorder = new MicrophoneRecorderSource(AudioType.PCM_16k);
-                if (_audioType == AudioType.SPEEX_WB)
-                {
+                if (_audioType == AudioType.SPEEX_WB){
                     _encoder = new SpeexEncoderPipe();
                 }
-                else
-                {
+                else{
                     _encoder = new OpusEncoderPipe();
                 }
                 _encoder.connectAudioSource(_recorder);
@@ -393,5 +402,56 @@ public class CloudASRActivity extends AppCompatActivity
 
         // Cloud Recognizer initialization
         _cloudRecognizer = new CloudRecognizer(_cloudServices);
+    }
+
+
+    public void startGoogleASR(View view){
+        resultEditText.setText("");
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,getClass().getPackage().getName());
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH);
+        startActivityForResult(intent,VOICE_RECOGNITION_REQUEST_CODE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        if (resultCode == RESULT_OK){
+            ArrayList<String> textMatchlist = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+
+            if (!textMatchlist.isEmpty()){
+                resultEditText.setText(textMatchlist.get(0));
+//                if (textMatchlist.get(0).contains("search")){
+//                    String searchQuery = textMatchlist.get(0).replace("search"," ");
+//                    Intent search = new Intent(Intent.ACTION_WEB_SEARCH);
+//                    search.putExtra(SearchManager.QUERY,searchQuery);
+//                    startActivity(search);
+//                }
+//                else {
+//                    mlvTextMatches.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_expandable_list_item_1,textMatchlist));
+//                }
+            }
+        }
+        else if (resultCode == RecognizerIntent.RESULT_AUDIO_ERROR){
+            showToastMessage("Audio Error");
+
+        }
+        else if ((resultCode == RecognizerIntent.RESULT_CLIENT_ERROR)){
+            showToastMessage("Client Error");
+
+        }
+        else if (resultCode == RecognizerIntent.RESULT_NETWORK_ERROR){
+            showToastMessage("Network Error");
+        }
+        else if (resultCode == RecognizerIntent.RESULT_NO_MATCH){
+            showToastMessage("No Match");
+        }
+        else if (resultCode == RecognizerIntent.RESULT_SERVER_ERROR){
+            showToastMessage("Server Error");
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    void  showToastMessage(String message){
+        Toast.makeText(this,message,Toast.LENGTH_LONG).show();
     }
 }

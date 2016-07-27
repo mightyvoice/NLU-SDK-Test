@@ -56,12 +56,19 @@
         android:scrollbars = "vertical"
         android:hint="@string/Recognition_Results_Hint"
         android:layout_width="fill_parent"
-        android:layout_height="50dp"
+        android:layout_height="60dp"
         android:textSize="20dp"/>
 
     <ListView android:layout_width="wrap_content"
         android:layout_height="wrap_content" android:gravity="top"
         android:id="@+id/ambiguityListView">
     </ListView>
+
+    <Button
+        android:id="@+id/startGoogleAsrButton"
+        android:text="Start Google ASR"
+        android:onClick="startGoogleASR"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content" />
 
 </LinearLayout>
