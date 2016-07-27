@@ -25,6 +25,7 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.TextView;
 /////////test git
 import com.example.lj.asrttstest.info.AppInfo;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
@@ -77,7 +78,7 @@ public class CloudASRActivity extends AppCompatActivity
         setContentView(R.layout.activity_cloud_asr);
 
         // UI initialization
-        final EditText resultEditText = (EditText)findViewById(R.id.cloudResultEditText);
+        final TextView resultEditText = (TextView)findViewById(R.id.cloudResultEditText);
         final Button startRecognitionButton = (Button) findViewById(R.id.startCloudRecognitionButton);
         final Button stopRecognitionButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
         final Button cancelButton = (Button) findViewById(R.id.cancelCloudRecognitionButton);
