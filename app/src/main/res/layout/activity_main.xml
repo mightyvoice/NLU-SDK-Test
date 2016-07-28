@@ -9,20 +9,4 @@
                 android:text="@string/Cloud_Recognizer"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content" />
-            <Button
-                android:id="@+id/nluCloudRecognizerButton"
-                android:text="@string/Nlu_Cloud_Recognizer"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content" />
-            <Button
-                android:id="@+id/cloudVocalizerButton"
-                android:text="@string/Cloud_Vocalizer"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content" />
-
-            <Button
-                android:id="@+id/uploadContactButton"
-                android:text="Upload Contacts"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content" />
         </LinearLayout>

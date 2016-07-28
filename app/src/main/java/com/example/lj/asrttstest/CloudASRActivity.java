@@ -1,35 +1,16 @@
 package com.example.lj.asrttstest;
 
-import android.app.Activity;
-import android.app.SearchManager;
 import android.content.Intent;
 import android.speech.RecognizerIntent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.EditText;
-import android.widget.Spinner;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import android.app.Activity;
-import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.EditText;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 /////////test git
@@ -75,7 +56,7 @@ public class CloudASRActivity extends AppCompatActivity
 
     private boolean _speexEnabled;
 
-    private TextView resultEditText;
+    private TextView resultTextView;
 
     /**
      * Called when the activity is first created.
@@ -88,45 +69,17 @@ public class CloudASRActivity extends AppCompatActivity
         setContentView(R.layout.activity_cloud_asr);
 
         // UI initialization
-        resultEditText = (TextView)findViewById(R.id.cloudResultEditText);
+        resultTextView = (TextView)findViewById(R.id.cloudResultEditText);
         final Button startRecognitionButton = (Button) findViewById(R.id.startCloudRecognitionButton);
         final Button stopRecognitionButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
-        final Button cancelButton = (Button) findViewById(R.id.cancelCloudRecognitionButton);
-        final Spinner resultModeSpinner = (Spinner) findViewById(R.id.resultModeSpinner);
-        final CheckBox speexCheckBox = (CheckBox) findViewById(R.id.speexCheckBox);
         startRecognitionButton.setEnabled(true);
         stopRecognitionButton.setEnabled(false);
-        cancelButton.setEnabled(false);
 
         // by default using opus
-        _speexEnabled = speexCheckBox.isChecked();
         _audioType = AudioType.OPUS_WB;
         _ttsService = new TTSService(getApplicationContext());
 
         reCreateCloudRecognizer();
-
-        speexCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener()
-        {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
-            {
-                _speexEnabled = isChecked;
-                if (_encoder != null) {
-                    _encoder.disconnectAudioSource();
-                    _encoder.release();
-                }
-                _encoder = null;
-                if (!_speexEnabled)
-                {
-                    _audioType = AudioType.OPUS_WB;
-                }
-                else
-                {
-                    _audioType = AudioType.SPEEX_WB;
-                }
-                reCreateCloudRecognizer();
-            }
-        });
 
         startRecognitionButton.setOnClickListener(new View.OnClickListener()
         {
@@ -135,10 +88,9 @@ public class CloudASRActivity extends AppCompatActivity
             {
                 startRecognitionButton.setEnabled(false);
                 stopRecognitionButton.setEnabled(true);
-                cancelButton.setEnabled(true);
-                resultEditText.setText("");
+                resultTextView.setText("");
 
-                String resultmodeName = resultModeSpinner.getSelectedItem().toString();
+                String resultmodeName = "No Partial Results";
 
                 // Set-up audio chaining
                 _recorder = new MicrophoneRecorderSource(AudioType.PCM_16k);
@@ -164,15 +116,16 @@ public class CloudASRActivity extends AppCompatActivity
                                 java.lang.String topResult = parseResults(result);
 
                                 if(topResult != null) {
-                                    resultEditText.setText(topResult);
-//                                    _ttsService.performTTS(getApplicationContext(), topResult);
+                                    resultTextView.setText(topResult);
                                 }
                             }
 
                             @Override
                             public void onError(CloudRecognitionError error) {
-//                                resultEditText.setText(error.toString());
-                                resultEditText.setText(error.toJSON().toString());
+//                                resultTextView.setText(error.toString());
+                                String err = error.toJSON().toString();
+                                resultTextView.setText("speech not recognized");
+                                Log.d("sss", err);
                             }
 
                             @Override
@@ -197,7 +150,6 @@ public class CloudASRActivity extends AppCompatActivity
             {
                 startRecognitionButton.setEnabled(true);
                 stopRecognitionButton.setEnabled(false);
-                cancelButton.setEnabled(true);
 
                 _recorder.stopRecording();
                 _recorder = null;
@@ -215,37 +167,6 @@ public class CloudASRActivity extends AppCompatActivity
             }
         });
 
-        cancelButton.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View v)
-            {
-                startRecognitionButton.setEnabled(true);
-                stopRecognitionButton.setEnabled(false);
-                cancelButton.setEnabled(false);
-
-                if (_recorder != null)
-                {
-                    _recorder.stopRecording();
-                }
-
-                if (_encoder != null)
-                {
-                    _encoder.disconnectAudioSource();
-                    _encoder.release();
-                    _encoder = null;
-                }
-
-                _cloudRecognizer.cancel();
-
-                if (_appSessionLeadEvent != null) {
-                    SessionEventBuilder eventBuilder = _appSessionLeadEvent.createChildEventBuilder("cloud recognition");
-                    eventBuilder.putString("cancel", "recognition canceled");
-                    eventBuilder.commit();
-                }
-                CalllogManager.flushCallLogData();
-            }
-        });
     }
 
     @Override
@@ -406,7 +327,7 @@ public class CloudASRActivity extends AppCompatActivity
 
 
     public void startGoogleASR(View view){
-        resultEditText.setText("");
+        resultTextView.setText("");
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE,getClass().getPackage().getName());
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH);
@@ -419,7 +340,7 @@ public class CloudASRActivity extends AppCompatActivity
             ArrayList<String> textMatchlist = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
 
             if (!textMatchlist.isEmpty()){
-                resultEditText.setText(textMatchlist.get(0));
+                resultTextView.setText(textMatchlist.get(0));
 //                if (textMatchlist.get(0).contains("search")){
 //                    String searchQuery = textMatchlist.get(0).replace("search"," ");
 //                    Intent search = new Intent(Intent.ACTION_WEB_SEARCH);
