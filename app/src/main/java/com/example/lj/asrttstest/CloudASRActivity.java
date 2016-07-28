@@ -17,7 +17,9 @@ import android.widget.Toast;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
 import com.nuance.dragon.toolkit.audio.AudioType;
+import com.nuance.dragon.toolkit.audio.SpeechDetectionListener;
 import com.nuance.dragon.toolkit.audio.pipes.ConverterPipe;
+import com.nuance.dragon.toolkit.audio.pipes.EndPointerPipe;
 import com.nuance.dragon.toolkit.audio.pipes.OpusEncoderPipe;
 import com.nuance.dragon.toolkit.audio.pipes.SpeexEncoderPipe;
 import com.nuance.dragon.toolkit.audio.sources.MicrophoneRecorderSource;
@@ -45,16 +47,16 @@ public class CloudASRActivity extends AppCompatActivity
 
     private CloudServices      _cloudServices;
     private CloudRecognizer    _cloudRecognizer;
-    private RecorderSource<AudioChunk>     _recorder;
+    private RecorderSource<AudioChunk>     recorder;
     private ConverterPipe<AudioChunk, AudioChunk> _encoder;
+    private SpeexEncoderPipe speexPipe;
+    private EndPointerPipe endpointerPipe;
     // call log feature
     private SessionEvent       _appSessionLeadEvent;
     private String             _appLeadSessionId;
     private CalllogSender      _calllogSender;
     private AudioType          _audioType;
     private TTSService         _ttsService;
-
-    private boolean _speexEnabled;
 
     private TextView resultTextView;
 
@@ -71,13 +73,11 @@ public class CloudASRActivity extends AppCompatActivity
         // UI initialization
         resultTextView = (TextView)findViewById(R.id.cloudResultEditText);
         final Button startRecognitionButton = (Button) findViewById(R.id.startCloudRecognitionButton);
-        final Button stopRecognitionButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
+//        final Button stopRecognitionButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
         startRecognitionButton.setEnabled(true);
-        stopRecognitionButton.setEnabled(false);
+//        stopRecognitionButton.setEnabled(false);
 
-        // by default using opus
-        _audioType = AudioType.OPUS_WB;
-        _ttsService = new TTSService(getApplicationContext());
+        _audioType = AudioType.SPEEX_WB;
 
         reCreateCloudRecognizer();
 
@@ -87,32 +87,42 @@ public class CloudASRActivity extends AppCompatActivity
             public void onClick(View v)
             {
                 startRecognitionButton.setEnabled(false);
-                stopRecognitionButton.setEnabled(true);
+//                stopRecognitionButton.setEnabled(true);
                 resultTextView.setText("");
 
                 String resultmodeName = "No Partial Results";
 
                 // Set-up audio chaining
-                _recorder = new MicrophoneRecorderSource(AudioType.PCM_16k);
-                if (_audioType == AudioType.SPEEX_WB){
-                    _encoder = new SpeexEncoderPipe();
-                }
-                else{
-                    _encoder = new OpusEncoderPipe();
-                }
-                _encoder.connectAudioSource(_recorder);
+                recorder = new MicrophoneRecorderSource(AudioType.PCM_16k);
+                speexPipe = new SpeexEncoderPipe();
+                endpointerPipe = new EndPointerPipe(new SpeechDetectionListener() {
+                    @Override
+                    public void onStartOfSpeech() {
+                        resultTextView.setText("Start of Speech...");
+                    }
+
+                    @Override
+                    public void onEndOfSpeech() {
+                        resultTextView.setText("End of Speech...");
+                        _cloudRecognizer.processResult();
+                        startRecognitionButton.setEnabled(true);
+                        stopRecording();
+                    }
+                });
 
                 // Start recording and recognition
-                _recorder.startRecording();
+                recorder.startRecording();
+                speexPipe.connectAudioSource(recorder);
+                endpointerPipe.connectAudioSource(speexPipe);
                 _cloudRecognizer.startRecognition(createRecogSpec(resultmodeName),
-                        _encoder,
+                        endpointerPipe,
                         new CloudRecognizer.Listener()
                         {
                             @Override
                             public void onResult(CloudRecognitionResult result) {
                                 //get the original jason
 //                                Data.Dictionary appServerResults = result.getDictionary().getDictionary("appserver_results");
-//                                Log.d("ssss", appServerResults.toJSON().toString());
+//                                Log.d("ssss", appServerResultc就可以去掉高亮啦.toJSON().toString());
                                 java.lang.String topResult = parseResults(result);
 
                                 if(topResult != null) {
@@ -143,30 +153,42 @@ public class CloudASRActivity extends AppCompatActivity
             }
         });
 
-        stopRecognitionButton.setOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View v)
-            {
-                startRecognitionButton.setEnabled(true);
-                stopRecognitionButton.setEnabled(false);
+//        stopRecognitionButton.setOnClickListener(new View.OnClickListener()
+//        {
+//            @Override
+//            public void onClick(View v)
+//            {
+//                startRecognitionButton.setEnabled(true);
+//                stopRecognitionButton.setEnabled(false);
+//                _cloudRecognizer.processResult();
+//                stopRecording();
+//
+//                if (_appSessionLeadEvent != null) {
+//                    SessionEventBuilder eventBuilder = _appSessionLeadEvent.createChildEventBuilder("cloud recognition");
+//                    eventBuilder.putString("stop", "recognition stopped");
+//                    eventBuilder.commit();
+//                }
+//                CalllogManager.flushCallLogData();
+//            }
+//        });
 
-                _recorder.stopRecording();
-                _recorder = null;
-                _encoder.disconnectAudioSource();
-                _encoder.release();
-                _encoder = null;
-                _cloudRecognizer.processResult();
+    }
 
-                if (_appSessionLeadEvent != null) {
-                    SessionEventBuilder eventBuilder = _appSessionLeadEvent.createChildEventBuilder("cloud recognition");
-                    eventBuilder.putString("stop", "recognition stopped");
-                    eventBuilder.commit();
-                }
-                CalllogManager.flushCallLogData();
-            }
-        });
+    private void stopRecording() {
+        if (endpointerPipe != null) {
+            endpointerPipe.disconnectAudioSource();
+            endpointerPipe = null;
+        }
 
+        if (speexPipe != null) {
+            speexPipe.disconnectAudioSource();
+            speexPipe = null;
+        }
+
+        if (recorder != null) {
+            recorder.stopRecording();
+            recorder = null;
+        }
     }
 
     @Override
@@ -174,9 +196,9 @@ public class CloudASRActivity extends AppCompatActivity
     {
         super.onDestroy();
 
-        if (_recorder != null)
-            _recorder.stopRecording();
-        _recorder = null;
+        if (recorder != null)
+            recorder.stopRecording();
+        recorder = null;
 
         if (_encoder != null) {
             _encoder.disconnectAudioSource();
@@ -239,13 +261,6 @@ public class CloudASRActivity extends AppCompatActivity
 
     private java.lang.String parseResults(CloudRecognitionResult cloudResult)
     {
-        //get the original jason
-//        Data.Dictionary appServerResults = cloudResult.getDictionary().getDictionary("appserver_results");
-//        Log.d("ssss", appServerResults.toJSON().toString());
-//        Data.Dictionary transcriptionDict = appServerResults.getDictionary("payload").getSequence("actions").getDictionary(0);
-
-
-
         Data.Dictionary processedResult = cloudResult.getDictionary();
 
         // Parse results based on the "NVC_ASR_CMD"
