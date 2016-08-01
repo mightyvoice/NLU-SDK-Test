@@ -508,12 +508,12 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
      * @param result the result
      */
     private void onGetDataResultFromAudioRecognizer(JSONObject result) {
-        try {
-            sendJsonToEmail(result.toString(4));
-//            Log.d("sss", result.toString(4));
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            sendJsonToEmail(result.toString(4));
+////            Log.d("sss", result.toString(4));
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
         String feedback = "";
         String phoneNumber = "";
         audioDialogManager = new AudioDialogManager(result);
