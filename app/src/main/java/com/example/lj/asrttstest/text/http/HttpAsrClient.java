@@ -38,6 +38,12 @@ public class HttpAsrClient {
     /** The application's nmaid. */
     private String _appId;
 
+    /** The unique ID returned from data uploader, used as uId **/
+    private String _datauploadReturnUniqueID;
+
+    /** The application session ID for keep the context **/
+    private String curApplicationSessionID;
+
     /** The 128-byte string app key. */
     private String _appKey;
 
@@ -138,7 +144,7 @@ public class HttpAsrClient {
         private int _utteranceNumber = 1;								// Track the sequence of transaction requests within an application session
 
         public String initApplicationSessionID() {
-            _applicationSessionID = AppInfo.applicationSessionID;
+            _applicationSessionID = curApplicationSessionID;
 
             return _applicationSessionID;
         }
@@ -173,6 +179,26 @@ public class HttpAsrClient {
         _appId = appId;
         _appKey = appKey;
         _useTLS = useTLS;
+
+        _requestData = new RequestData();
+        _requestData.LANGUAGE = langCode;
+        _requestData.DICTATION_TYPE = topic;
+
+    }
+
+    public HttpAsrClient(String host, int port, boolean useTLS, String appId,
+                         String appKey, String datauploadReturnUniqueID,
+                         String applicationSessionID,
+                         String topic, String langCode) {
+
+        write("Host: " + host + ":" + port);
+        _host = host;
+        _port = port;
+        _appId = appId;
+        _appKey = appKey;
+        _useTLS = useTLS;
+        _datauploadReturnUniqueID = datauploadReturnUniqueID;
+        curApplicationSessionID = applicationSessionID;
 
         _requestData = new RequestData();
         _requestData.LANGUAGE = langCode;
@@ -934,7 +960,7 @@ public class HttpAsrClient {
      *
      */
     protected void initialize() {
-        _userID = AppInfo.dataUploadUniqueID;
+        _userID = _datauploadReturnUniqueID;
         _requestData.initApplicationSessionID();
         _requestData.resetUtteranceNumber();
     }

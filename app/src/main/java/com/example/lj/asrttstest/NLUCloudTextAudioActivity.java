@@ -24,12 +24,14 @@ import android.widget.TextView;
 import com.example.lj.asrttstest.dialog.AudioCallingDomain;
 import com.example.lj.asrttstest.dialog.AudioDialogManager;
 import com.example.lj.asrttstest.dialog.AudioMessageDomain;
+import com.example.lj.asrttstest.info.AllContactInfo;
 import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.info.Global;
 import com.example.lj.asrttstest.text.CloudTextRecognizer;
 import com.example.lj.asrttstest.text.dialog.TextCallingDomain;
 import com.example.lj.asrttstest.text.dialog.TextDialogManager;
 import com.example.lj.asrttstest.text.dialog.TextMessageDomain;
+import com.example.lj.asrttstest.text.dialog.TextServerResponse;
 import com.nuance.dragon.toolkit.audio.AudioChunk;
 import com.nuance.dragon.toolkit.audio.AudioType;
 import com.nuance.dragon.toolkit.audio.SpeechDetectionListener;
@@ -94,6 +96,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
     public String textForRecognition = "";
     public JSONObject serverResponseJSON = null;
+    private TextServerResponse  textServerResponse;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -622,7 +625,11 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
         @Override
         protected String doInBackground(String... params) {
             if(textForRecognition != null && !textForRecognition.equals("")){
-                serverResponseJSON = new CloudTextRecognizer().startTextRecognition(textForRecognition);
+                textServerResponse = new CloudTextRecognizer(
+                        AppInfo.dataUploadUniqueID,
+                        AppInfo.applicationSessionID,
+                        textForRecognition
+                ).startTextRecognition(textForRecognition);
             }
             return null;
         }
@@ -634,17 +641,16 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
             startTextRecognitionButton.setEnabled(true);
             textInputView.setEnabled(true);
             textInputView.setText("");
-            if(serverResponseJSON != null) {
-                onGetDataResultFromTextRecognizer(serverResponseJSON);
+            if(textServerResponse != null) {
+                onGetDataResultFromTextRecognizer();
             }
         }
     }
 
     /**
-     * Process the returned json each time
-     * @param result the result
+     * Process the returned json from text recognition each time
      */
-    private void onGetDataResultFromTextRecognizer(JSONObject result) {
+    private void onGetDataResultFromTextRecognizer() {
 
 //        try {
 //            sendJsonToEmail(result.toString(4));
@@ -652,28 +658,27 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 //            e.printStackTrace();
 //        }
 
-        String feedback = "";
-        String phoneNumber = "";
-        TextDialogManager textDialogManager = new TextDialogManager(result);
-        feedback = textDialogManager.getTtsText();
-        ttsService.performTTS(getApplicationContext(), feedback);
+        ttsService.performTTS(getApplicationContext(), textServerResponse.getTtsText());
 
-        String curIntent = textDialogManager.getIntent();
-        String curDialogPhase = textDialogManager.getDialogPhase();
-        String curDomain = textDialogManager.getDomain();
+        String curIntent = textServerResponse.getIntent();
+        String curDialogPhase = textServerResponse.getDialogPhase();
+        String curDomain = textServerResponse.getDomain();
+        String phoneNumber = textServerResponse.getPhoneNumber();
+        String phoneNumberID = textServerResponse.getPhoneID();
+
+        if(phoneNumber.equals("") && phoneNumberID != null && !phoneNumberID.equals("")){
+            phoneNumber = AllContactInfo.allPhoneIDtoPhoneNum.get(phoneNumberID);
+        }
 
         //calling domain process
         if(curDomain != null && curDomain.equals("calling")){
-            TextCallingDomain callingDomain
-                    = new TextCallingDomain(getApplicationContext(), textDialogManager.getActions(), textDialogManager.getTtsText());
-            callingDomain.parseAllUsefulInfo();
-            phoneNumber = callingDomain.phoneNumber;
-
-            Log.d("sss", textDialogManager.getDialogPhaseDetail());
-            textRecognizedView.setText(textDialogManager.getDialogPhaseDetail());
 
             //if there is ambiguty
             if(curDialogPhase != null && curDialogPhase.equals("disambiguation")){
+                Global.ambiguityList.clear();
+                for(String l: textServerResponse.getAmbiguityList()){
+                    Global.ambiguityList.add(l);
+                }
                 ambiguityListAdapter.notifyDataSetChanged();
             }
 
@@ -689,21 +694,19 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
 //        //message domain process
         if(curDomain != null && curDomain.equals("messaging")) {
-            TextMessageDomain messageDomainProc
-                    = new TextMessageDomain(getApplicationContext(), textDialogManager.getActions(), textDialogManager.getTtsText());
-            messageDomainProc.parseAllUsefulInfo();
-            phoneNumber = messageDomainProc.phoneNumber;
-            Log.d("sss", textDialogManager.getDialogPhaseDetail());
-            textRecognizedView.setText(textDialogManager.getDialogPhaseDetail());
 
             //if there is ambiguity
             if (curDialogPhase != null && curDialogPhase.equals("disambiguation")) {
+                Global.ambiguityList.clear();
+                for(String l: textServerResponse.getAmbiguityList()){
+                    Global.ambiguityList.add(l);
+                }
                 ambiguityListAdapter.notifyDataSetChanged();
             }
 
             if (curIntent != null && curIntent.equals("display")) {
                 Global.ambiguityList.clear();
-                Global.ambiguityList.add(messageDomainProc.messageContent);
+                Global.ambiguityList.add(textServerResponse.getMessageContent());
                 ambiguityListAdapter.notifyDataSetChanged();
             }
 
@@ -712,7 +715,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                     ActivityCompat.checkSelfPermission(getApplicationContext(),
                             Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED) {
                 SmsManager smsManager = SmsManager.getDefault();
-                smsManager.sendTextMessage(phoneNumber, null, messageDomainProc.getMessageContent(), null, null);
+                smsManager.sendTextMessage(phoneNumber, null, textServerResponse.getMessageContent(), null, null);
             }
         }
     }

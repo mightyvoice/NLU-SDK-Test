@@ -4,8 +4,9 @@ package com.example.lj.asrttstest.text;
  * Created by lj on 16/6/29.
  */
 
+import com.example.lj.asrttstest.text.dialog.TextDialogManager;
+import com.example.lj.asrttstest.text.dialog.TextServerResponse;
 import com.example.lj.asrttstest.text.http.HttpAsrClient;
-import com.example.lj.asrttstest.info.AppInfo;
 import org.json.JSONObject;
 
 
@@ -16,34 +17,51 @@ import org.json.JSONObject;
  */
 public class CloudTextRecognizer {
 
-    private HttpAsrClient asrClient = null;
-    private final static String appKey = "89e9b1b619dfc7d682237e701da7ada48316f675f73c5ecd23a41fc40782bc212ed3562022c23e75214dcb9010286c23afe100e00d4464873e004d1f4c8a5883";
-    private final static boolean useTLS = true;
-    private final static String topic = "nma_dm_main";
-    private final static String langCode = "eng-USA";
+    private static final String TextHost = "mtldev08.nuance.com";
+    private static final int TextPort = 443;
+    private static final String TextAppId = "NMT_EVAL_TCL_20150814";
+    private final static String TextAppKey = "89e9b1b619dfc7d682237e701da7ada48316f675f73c5ecd23a41fc40782bc212ed3562022c23e75214dcb9010286c23afe100e00d4464873e004d1f4c8a5883";
+    private final static boolean UseTLS = true;
+    private final static String Topic = "nma_dm_main";
+    private final static String LangCode = "eng-USA";
 
-    public CloudTextRecognizer(){
+    private HttpAsrClient asrClient = null;
+    private JSONObject serverResponseJSON;
+    public String datauploadReturnUniqueID;
+    public String textForNLU;
+    private TextServerResponse serverResponse;
+
+    public CloudTextRecognizer(String _datauploadReturnUniqueID,
+                               String _applicationSessionID,
+                               String _textForNLU){
+        datauploadReturnUniqueID = _datauploadReturnUniqueID;
+        textForNLU = _textForNLU;
         if(asrClient == null){
             asrClient = new HttpAsrClient(
-                    AppInfo.TextHost,
-                    AppInfo.Port,
-                    useTLS,
-                    AppInfo.AppId,
-                    appKey,
-                    topic,
-                    langCode );
+                    TextHost,
+                    TextPort,
+                    UseTLS,
+                    TextAppId,
+                    TextAppKey,
+                    _datauploadReturnUniqueID,
+                    _applicationSessionID,
+                    Topic,
+                    LangCode);
         }
+        serverResponseJSON = null;
     }
 
-    public JSONObject startTextRecognition(String _text) {
+    public TextServerResponse startTextRecognition(String _text) {
 
-        String nluTextString = _text;
-
-        if( nluTextString != null && !nluTextString.equals("")) {
+        if( _text != null && !_text.equals("")) {
             asrClient.enableTextNLU();
-            asrClient.sendNluTextRequest(nluTextString);
+            asrClient.sendNluTextRequest(_text);
         }
 
-        return asrClient.serverResponseJSON;
+        serverResponse = null;
+        TextDialogManager textDialogManager = new TextDialogManager(asrClient.serverResponseJSON);
+        serverResponse = textDialogManager.getTextServerResponse();
+        return serverResponse;
     }
+
 }

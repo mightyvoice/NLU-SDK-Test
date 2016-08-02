@@ -1,6 +1,5 @@
 package com.example.lj.asrttstest.text.dialog;
 
-import com.example.lj.asrttstest.dialog.IDialogResult;
 
 import org.json.JSONObject;
 
@@ -10,11 +9,9 @@ import org.json.JSONObject;
 public interface ITextDialogManager {
     /**
      * Process server response.
-     *
      * @param response the response
-     * @return the dialog result
      */
-    IDialogResult processServerResponse(JSONObject response);
+    void processServerResponse(JSONObject response);
 
     /**
      * Parses the status.

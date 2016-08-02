@@ -4,17 +4,13 @@ package com.example.lj.asrttstest.text.dialog;
  * Created by lj on 16/7/13.
  */
 
-import com.example.lj.asrttstest.dialog.DialogResult;
-import com.example.lj.asrttstest.dialog.IDialogManager;
-import com.example.lj.asrttstest.dialog.IDialogResult;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
  * Created by lj on 16/7/13.
  */
-public class TextBaseDialogManager implements IDialogManager {
+public class TextBaseDialogManager implements ITextDialogManager {
     /** Dialog Phase is returned in the NCS Ref NLU JSON Response. topLevel let's the client know that the dialog is complete and it should reset dialog management after processing the response. */
     private static final String DIALOG_PHASE_TOP_LEVEL				= "topLevel";
 
@@ -92,9 +88,8 @@ public class TextBaseDialogManager implements IDialogManager {
      * @see com.nuance.dragon.toolkit.sample.IDialogManager#processServerResponse(org.json.JSONObject)
      */
     @Override
-    public IDialogResult processServerResponse(JSONObject response) {
+    public void processServerResponse(JSONObject response) {
         mJsonResponse = response;
-
         mStatus = parseStatus();
         mFinalResponse = parseFinalResponse();
         mDomain = parseDomain();
@@ -106,9 +101,6 @@ public class TextBaseDialogManager implements IDialogManager {
         mGetData = parseGetData();
         mNlpsVersion = parseNlpsVersion();
         mServerSpecifiedSettings = parseServerSpecifiedSettings();
-
-		/* The dialog result. */
-        return new DialogResult(mTtsText, mSystemText, isFinalResponse(), continueDialog(), mDialogPhase);
     }
 
     /**

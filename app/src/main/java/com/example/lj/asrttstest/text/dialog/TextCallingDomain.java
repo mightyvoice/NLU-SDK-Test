@@ -1,36 +1,33 @@
 package com.example.lj.asrttstest.text.dialog;
 
-import android.content.Context;
-
-import com.example.lj.asrttstest.dialog.Domain;
-import com.example.lj.asrttstest.info.AllContactInfo;
-import com.example.lj.asrttstest.info.Global;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
 
 /**
  * Created by lj on 16/7/13.
  */
-public class TextCallingDomain extends Domain {
+public class TextCallingDomain extends TextBaseDomain {
 
-    public String phoneNumber;
+    public String phoneNumber = null;
 
-    public String phoneNumberID;
+    public String phoneNumberID = null;
 
-    public String contactName;
+    public TextCallingDomain(JSONArray _actionArray) {
+        super(_actionArray);
+    }
 
-    public TextCallingDomain(Context _context, JSONArray _actionArray, String _ttsText) {
-        super(_context, _actionArray, _ttsText);
-        phoneNumber = "";
-        phoneNumberID = "";
-        contactName = "";
+    @Override
+    public void parseAllUsefulInfo() {
+        getContactInfo();
+        parseAmbiguityList();
     }
 
     @Override
     protected void parseAmbiguityList() {
-        Global.ambiguityList.clear();
         JSONArray curArray = actionArray;
+        ambiguityList = new ArrayList<String>();
         for(int i = 0; i < curArray.length(); i++){
             JSONObject curObject = curArray.optJSONObject(i);
             if(curObject.has("entries")){
@@ -43,13 +40,13 @@ public class TextCallingDomain extends Domain {
                         if(entry.has("lastName")){
                             name = name + " " + entry.optString("lastName");
                         }
-                        Global.ambiguityList.add(name);
+                        ambiguityList.add(name);
                         continue;
                     }
                     //if there are several phone types
                     if(entry.has("type")){
                         String phoneType = entry.optString("type");
-                        Global.ambiguityList.add(phoneType);
+                        ambiguityList.add(phoneType);
                         continue;
                     }
                 }
@@ -58,30 +55,15 @@ public class TextCallingDomain extends Domain {
         }
     }
 
-    @Override
-    public void parseAllUsefulInfo() {
-        getContactInfo();
-        parseAmbiguityList();
-    }
-
     private void getContactInfo(){
-        phoneNumber = "";
         JSONArray curArray = actionArray;
         for(int i = 0; i < curArray.length(); i++){
             JSONObject curObject = curArray.optJSONObject(i);
             if(curObject.has("contact")){
                 curObject = curObject.optJSONObject("contact");
                 phoneNumber = curObject.optString("phoneNumber");
-                if(phoneNumber != null && !phoneNumber.equals("")){
-                    return;
-                }
                 phoneNumberID = curObject.optString("phoneNumberId");
-                if(phoneNumberID != null && !phoneNumberID.equals("")
-                        &&AllContactInfo.allPhoneIDtoPhoneNum.containsKey(phoneNumberID)){
-                    phoneNumber = AllContactInfo.allPhoneIDtoPhoneNum.get(phoneNumberID);
-                    return;
-                }
-                else return;
+                return;
             }
         }
     }
