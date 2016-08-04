@@ -290,8 +290,8 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
     private void sendJsonToEmail(String result) {
         Intent data = new Intent(Intent.ACTION_SENDTO);
-        data.setData(Uri.parse("mailto:zijufeng@tcl.com"));
-//        data.setData(Uri.parse("mailto:rpbloom@gmail.com"));
+//        data.setData(Uri.parse("mailto:mengwenliu09@gmail.com"));
+        data.setData(Uri.parse("mailto:rpbloom@gmail.com"));
         data.putExtra(Intent.EXTRA_SUBJECT, "这是标题");
         data.putExtra(Intent.EXTRA_TEXT, result);
         startActivity(data);
