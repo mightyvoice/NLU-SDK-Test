@@ -14,7 +14,7 @@ import org.json.JSONObject;
 /**
  * Created by lj on 16/7/13.
  */
-public class TextBaseDialogManager implements IDialogManager {
+public class TextBaseDialogManager implements ITextDialogManager {
     /** Dialog Phase is returned in the NCS Ref NLU JSON Response. topLevel let's the client know that the dialog is complete and it should reset dialog management after processing the response. */
     private static final String DIALOG_PHASE_TOP_LEVEL				= "topLevel";
 
@@ -89,12 +89,11 @@ public class TextBaseDialogManager implements IDialogManager {
 
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#processServerResponse(org.json.JSONObject)
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#processServerResponse(org.json.JSONObject)
      */
     @Override
-    public IDialogResult processServerResponse(JSONObject response) {
+    public void processServerResponse(JSONObject response) {
         mJsonResponse = response;
-
         mStatus = parseStatus();
         mFinalResponse = parseFinalResponse();
         mDomain = parseDomain();
@@ -106,9 +105,6 @@ public class TextBaseDialogManager implements IDialogManager {
         mGetData = parseGetData();
         mNlpsVersion = parseNlpsVersion();
         mServerSpecifiedSettings = parseServerSpecifiedSettings();
-
-		/* The dialog result. */
-        return new DialogResult(mTtsText, mSystemText, isFinalResponse(), continueDialog(), mDialogPhase);
     }
 
     /**
@@ -197,7 +193,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseStatus()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#parseStatus()
      */
     @Override
     public String parseStatus() {
@@ -210,7 +206,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#getStatus()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#getStatus()
      */
     @Override
     public String getStatus() {
@@ -218,7 +214,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseFinalResponse()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#parseFinalResponse()
      */
     @Override
     public int parseFinalResponse() {
@@ -230,7 +226,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#isFinalResponse()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#isFinalResponse()
      */
     @Override
     public boolean isFinalResponse() {
@@ -238,7 +234,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseDomain()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#parseDomain()
      */
     @Override
     public String parseDomain() {
@@ -251,7 +247,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#getDomain()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#getDomain()
      */
     @Override
     public String getDomain() {
@@ -259,7 +255,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseDialogPhase()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#parseDialogPhase()
      */
     @Override
     public String parseDialogPhase() {
@@ -272,7 +268,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#getDialogPhase()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#getDialogPhase()
      */
     @Override
     public String getDialogPhase() {
@@ -280,7 +276,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseSystemText()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#parseSystemText()
      */
     @Override
     public String parseSystemText() {
@@ -293,7 +289,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#getSystemText()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#getSystemText()
      */
     @Override
     public String getSystemText() {
@@ -301,7 +297,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseIntent()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#parseIntent()
      */
     @Override
     public String parseIntent() {
@@ -314,7 +310,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#getIntent()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#getIntent()
      */
     @Override
     public String getIntent() {
@@ -322,7 +318,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseTtsText()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#parseTtsText()
      */
     @Override
     public String parseTtsText() {
@@ -335,7 +331,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#getTtsText()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#getTtsText()
      */
     @Override
     public String getTtsText() {
@@ -343,7 +339,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseResetDialog()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#parseResetDialog()
      */
     @Override
     public boolean parseResetDialog() {
@@ -356,7 +352,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#resetDialog()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#resetDialog()
      */
     @Override
     public boolean resetDialog() {
@@ -364,7 +360,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#continueDialog()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#continueDialog()
      */
     @Override
     public boolean continueDialog() {
@@ -372,7 +368,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseGetData()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#parseGetData()
      */
     @Override
     public JSONObject parseGetData() {
@@ -385,7 +381,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#getGetData()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#getGetData()
      */
     @Override
     public JSONObject getGetData() {
@@ -393,7 +389,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseNlpsVersion()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#parseNlpsVersion()
      */
     @Override
     public String parseNlpsVersion() {
@@ -407,7 +403,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#getNlpsVersion()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#getNlpsVersion()
      */
     @Override
     public String getNlpsVersion() {
@@ -415,7 +411,7 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#parseServerSpecifiedSettings()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#parseServerSpecifiedSettings()
      */
     @Override
     public JSONObject parseServerSpecifiedSettings() {
@@ -429,11 +425,12 @@ public class TextBaseDialogManager implements IDialogManager {
     }
 
     /* (non-Javadoc)
-     * @see com.nuance.dragon.toolkit.sample.IDialogManager#getServerSpecifiedSettings()
+     * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#getServerSpecifiedSettings()
      */
     @Override
     public JSONObject getServerSpecifiedSettings() {
         return mServerSpecifiedSettings;
     }
 }
+
 

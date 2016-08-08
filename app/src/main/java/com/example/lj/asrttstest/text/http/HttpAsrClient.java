@@ -38,6 +38,12 @@ public class HttpAsrClient {
     /** The application's nmaid. */
     private String _appId;
 
+    /** The unique ID returned from data uploader, used as uId **/
+    private String _datauploadReturnUniqueID;
+
+    /** The application session ID for keep the context **/
+    private String curApplicationSessionID;
+
     /** The 128-byte string app key. */
     private String _appKey;
 
@@ -121,7 +127,7 @@ public class HttpAsrClient {
         public String LANGUAGE = "eng-USA";								// Supported language codes can be found here: http://dragonmobile.nuancemobiledeveloper.com/public/index.php?task=supportedLanguages
         public String DICTATION_TYPE = "nma_dm_main";					// This is also sometimes referred to as Topic and Language Model. Supported values are: nma_dm_main (for NLU personal assistant), Dictation, Websearch, and DTV. Please reach out to Sales or PS for available language support for a given dictation type.
         static final String UI_LANGUAGE = "en";							// The keyboard language
-        public String APPLICATION = AppInfo.Application;
+        public String APPLICATION = "TCL";
 
         static final String CARRIER = "unknown";						// Name of your device's carrier, if applicable.
         static final String PHONE_NETWORK = "wifi";						// The device's network type
@@ -138,7 +144,7 @@ public class HttpAsrClient {
         private int _utteranceNumber = 1;								// Track the sequence of transaction requests within an application session
 
         public String initApplicationSessionID() {
-            _applicationSessionID = AppInfo.applicationSessionID;
+            _applicationSessionID = curApplicationSessionID;
 
             return _applicationSessionID;
         }
@@ -173,6 +179,26 @@ public class HttpAsrClient {
         _appId = appId;
         _appKey = appKey;
         _useTLS = useTLS;
+
+        _requestData = new RequestData();
+        _requestData.LANGUAGE = langCode;
+        _requestData.DICTATION_TYPE = topic;
+
+    }
+
+    public HttpAsrClient(String host, int port, boolean useTLS, String appId,
+                         String appKey, String datauploadReturnUniqueID,
+                         String applicationSessionID,
+                         String topic, String langCode) {
+
+        write("Host: " + host + ":" + port);
+        _host = host;
+        _port = port;
+        _appId = appId;
+        _appKey = appKey;
+        _useTLS = useTLS;
+        _datauploadReturnUniqueID = datauploadReturnUniqueID;
+        curApplicationSessionID = applicationSessionID;
 
         _requestData = new RequestData();
         _requestData.LANGUAGE = langCode;
@@ -238,7 +264,7 @@ public class HttpAsrClient {
     // Monitor socket timeout so app properly stops listening if no speech detected or recorder timeout fails...
     private volatile Thread connectionMonitorThread = null;
     private volatile static Object connectionWaitLock = new Object();
-    protected int connectionTimeout = Global.CONNECTION_TIME_OUT;
+    protected int connectionTimeout = 60000;
     protected volatile boolean connectionTimedOut = false;
     protected volatile boolean headersSent = false;
     private volatile boolean reuseStatusCode = false;
@@ -528,7 +554,7 @@ public class HttpAsrClient {
             contactGrammar.put("id", "contacts");
             contactGrammar.put("type", "structured_content");
             contactGrammar.put("structured_content_category", "contacts");
-            contactGrammar.put("checksum", AppInfo.dataUploadReturnedCheckSum);
+//            contactGrammar.put("checksum", AppInfo.dataUploadReturnedCheckSum);
             grammarArray.put(contactGrammar);
             json.put("grammar_list", grammarArray);
 
@@ -705,15 +731,15 @@ public class HttpAsrClient {
                     if( headers.containsKey("nuance-sessionid") )
 //                        _logData.sessionId = headers.get("nuance-sessionid");
 
-                    // Save the multi-part boundary if it exists. We'll need this to properly parse remaining body content
-                    if( headers.containsKey("content-type") ) {
-                        String contentType = headers.get("content-type");
-                        if( contentType.contains("boundary=") ) {
-                            String[] arr = contentType.split("=", 2);
-                            if( arr != null && arr.length == 2 )
-                                boundary = arr[1];
+                        // Save the multi-part boundary if it exists. We'll need this to properly parse remaining body content
+                        if( headers.containsKey("content-type") ) {
+                            String contentType = headers.get("content-type");
+                            if( contentType.contains("boundary=") ) {
+                                String[] arr = contentType.split("=", 2);
+                                if( arr != null && arr.length == 2 )
+                                    boundary = arr[1];
+                            }
                         }
-                    }
 
                     continue;
                 }
@@ -934,7 +960,7 @@ public class HttpAsrClient {
      *
      */
     protected void initialize() {
-        _userID = AppInfo.dataUploadUniqueID;
+        _userID = _datauploadReturnUniqueID;
         _requestData.initApplicationSessionID();
         _requestData.resetUtteranceNumber();
     }

@@ -32,7 +32,6 @@
             </intent-filter>
         </activity>
         <activity android:name=".CloudASRActivity" />
-        <activity android:name=".NLUCloudTextActivity" />
         <activity android:name=".TTSCloudActivity" />
         <activity android:name=".upload.ContactsActivity" />
         <activity android:name=".NLUCloudTextAudioActivity"

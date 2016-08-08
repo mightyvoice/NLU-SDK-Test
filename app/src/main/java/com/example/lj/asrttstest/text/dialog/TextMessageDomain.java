@@ -9,16 +9,18 @@ import com.example.lj.asrttstest.info.Global;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
 /**
  * Created by lj on 16/7/13.
  */
-public class TextMessageDomain extends Domain {
+public class TextMessageDomain extends TextBaseDomain {
     public String phoneNumber = null;
-    public String messageContent = null;
-    private String phoneNumberID = null;
+    public String messageContent = "";
+    public String phoneNumberID = "";
 
-    public TextMessageDomain(Context _context, JSONArray _actionArray, String _ttsText) {
-        super(_context, _actionArray, _ttsText);
+    public TextMessageDomain(JSONArray _actionArray) {
+        super(_actionArray);
     }
 
     private void getPhoneNumberAndMessage() {
@@ -30,14 +32,8 @@ public class TextMessageDomain extends Domain {
                 for (int j = 0; j < tmpArray.length(); j++) {
                     curObject = tmpArray.optJSONObject(i);
                     phoneNumberID = curObject.optString("phoneNumberId");
-                    if (phoneNumberID != null && AllContactInfo.allPhoneIDtoPhoneNum.containsKey(phoneNumberID)) {
-                        phoneNumber = AllContactInfo.allPhoneIDtoPhoneNum.get(phoneNumberID);
-                        break;
-                    }
                     phoneNumber = curObject.optString("phoneNumber");
-                    if (phoneNumber != null) {
-                        break;
-                    }
+                    break;
                 }
             }
             curObject = curArray.optJSONObject(i);
@@ -50,7 +46,7 @@ public class TextMessageDomain extends Domain {
 
     @Override
     public void parseAmbiguityList() {
-        Global.ambiguityList.clear();
+        ambiguityList = new ArrayList<String>();
         JSONArray curArray = actionArray;
         for(int i = 0; i < curArray.length(); i++){
             JSONObject curObject = curArray.optJSONObject(i);
@@ -65,13 +61,13 @@ public class TextMessageDomain extends Domain {
                         if(entry.has("lastName")){
                             name = name + " " + entry.optString("lastName");
                         }
-                        Global.ambiguityList.add(name);
+                        ambiguityList.add(name);
                         continue;
                     }
                     //if there are several phone types
                     if(entry.has("type")){
                         String phoneType = entry.optString("type");
-                        Global.ambiguityList.add(phoneType);
+                        ambiguityList.add(phoneType);
                         continue;
                     }
                 }
@@ -89,11 +85,6 @@ public class TextMessageDomain extends Domain {
     public void parseAllUsefulInfo() {
         getPhoneNumberAndMessage();
         parseAmbiguityList();
-    }
-
-    @Override
-    public void resetActionArray(Context _context, JSONArray _actionArray, String _ttsText) {
-        super.resetActionArray(_context, _actionArray, _ttsText);
     }
 
     public String getMessageContent(){
