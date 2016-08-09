@@ -88,6 +88,8 @@ public class TextBaseDialogManager implements ITextDialogManager {
     private JSONObject mServerSpecifiedSettings	= null;
 
 
+    private JSONArray mActions = null;
+
     /* (non-Javadoc)
      * @see com.nuance.dragon.toolkit.SampleCode.IDialogManager#processServerResponse(org.json.JSONObject)
      */
@@ -140,13 +142,11 @@ public class TextBaseDialogManager implements ITextDialogManager {
      * @return the actions
      */
     public JSONArray getActions() {
-        JSONArray actions = null;
-
+        if(mActions != null) return mActions;
         JSONObject payload = getPayload();
         if (payload != null)
-            actions = payload.optJSONArray("actions");
-
-        return actions;
+            mActions = payload.optJSONArray("actions");
+        return mActions;
     }
 
     /**

@@ -135,17 +135,29 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                  Global.ambiguityListChosenID = (int) id + 1;
                  Log.d("sss", "Click " + new Integer((int) id).toString());
 
-                 final UserCommandRecognizer userCommandRecognizer = new UserCommandRecognizer(AppInfo.dataUploadUniqueID,
+//                 final UserCommandRecognizer userCommandRecognizer = new UserCommandRecognizer(AppInfo.dataUploadUniqueID,
+//                         AppInfo.applicationSessionID,
+//                         textServerResponse.getUserClickCommands().get(Global.ambiguityListChosenID-1),
+//                         new UserCommandRecognizer.CommandRecognizerListener() {
+//                             @Override
+//                             public void onGetTextRecognitionResult(TextServerResponse response) {
+//                                 textServerResponse = response;
+//                                 onGetDataResultFromTextRecognizer();
+//                             }
+//                         },
+//                         getApplicationContext());
+                 CloudTextRecognizer cloudTextRecognizer = new CloudTextRecognizer(
+                         AppInfo.dataUploadUniqueID,
                          AppInfo.applicationSessionID,
-                         textServerResponse.getUserClickCommands().get(Global.ambiguityListChosenID),
-                         new UserCommandRecognizer.CommandRecognizerListener() {
+                         textServerResponse.getUserClickCommands().get(Global.ambiguityListChosenID-1),
+                         new CloudTextRecognizer.TextRecognizerListener() {
                              @Override
                              public void onGetTextRecognitionResult(TextServerResponse response) {
                                  textServerResponse = response;
                                  onGetDataResultFromTextRecognizer();
+                                 startTextRecognitionButton.setEnabled(true);
                              }
-                         },
-                         getApplicationContext());
+                         });
              }
          });
 
@@ -679,7 +691,8 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
         String phoneNumber = textServerResponse.getPhoneNumber();
         String phoneNumberID = textServerResponse.getPhoneID();
 
-        if(phoneNumber.equals("") && phoneNumberID != null && !phoneNumberID.equals("")){
+        if((phoneNumber == null && phoneNumberID != null && !phoneNumberID.equals("")) ||
+                (phoneNumber != null && phoneNumber.equals("") && phoneNumberID != null && !phoneNumberID.equals(""))){
             phoneNumber = AllContactInfo.allPhoneIDtoPhoneNum.get(phoneNumberID);
         }
 

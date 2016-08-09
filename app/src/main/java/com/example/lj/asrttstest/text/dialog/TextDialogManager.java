@@ -3,6 +3,7 @@ package com.example.lj.asrttstest.text.dialog;
 import android.util.Log;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -14,9 +15,12 @@ public class TextDialogManager extends TextBaseDialogManager {
     private TextServerResponse textServerResponse;
 
     public TextDialogManager(JSONObject input){
+        try {
+            Log.d("sss", input.toString(4));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         textServerResponse = null;
-        processServerResponse(input);
-        parseDialogPhaseDetail();
         textServerResponse = parseTextServerResponse(input);
         Log.d("sss", "##############################\n"+
                 "Domain: " + textServerResponse.getDomain()+"\n"+
@@ -37,6 +41,11 @@ public class TextDialogManager extends TextBaseDialogManager {
     }
 
     public TextServerResponse parseTextServerResponse(JSONObject input){
+//        try {
+//            Log.d("sss", input.toString(4));
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
         processServerResponse(input);
         parseDialogPhaseDetail();
         textServerResponse = new TextServerResponse();
@@ -67,6 +76,7 @@ public class TextDialogManager extends TextBaseDialogManager {
             textServerResponse.setPhoneNumber(messageDomain.phoneNumber);
             textServerResponse.setMessageContent(messageDomain.messageContent);
             textServerResponse.setAmbiguityList(messageDomain.ambiguityList);
+            textServerResponse.setUserClickCommands(messageDomain.userClickCommands);
         }
 
         return textServerResponse;

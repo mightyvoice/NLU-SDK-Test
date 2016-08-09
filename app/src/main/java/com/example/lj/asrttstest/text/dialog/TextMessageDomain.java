@@ -15,9 +15,10 @@ import java.util.ArrayList;
  * Created by lj on 16/7/13.
  */
 public class TextMessageDomain extends TextBaseDomain {
-    public String phoneNumber = null;
+    public String phoneNumber = "";
     public String messageContent = "";
     public String phoneNumberID = "";
+    public ArrayList<String> userClickCommands = new ArrayList<>();
 
     public TextMessageDomain(JSONArray _actionArray) {
         super(_actionArray);
@@ -54,6 +55,9 @@ public class TextMessageDomain extends TextBaseDomain {
                 JSONArray entries = curObject.optJSONArray("entries");
                 for(int j = 0; j < entries.length(); j++){
                     JSONObject entry = entries.optJSONObject(j);
+                    if(entry.has("action")){
+                        userClickCommands.add(entry.optString("action"));
+                    }
                     entry = entry.optJSONObject("item");
                     //if there are several names
                     if(entry.has("firstName")){

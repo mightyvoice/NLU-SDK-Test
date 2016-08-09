@@ -7,19 +7,19 @@ import java.util.ArrayList;
  */
 public class TextServerResponse {
 
-    private String domain = null;
-    private String intent = null;
-    private String dialogPhase = null;
-    private String dialogPhaseDetail = null;
-    private String status = null;
-    private String ttsText = null;
-    private String systemText = null;
-    private ArrayList<String> ambiguityList = null;
-    private String phoneID = null;
-    private String phoneNumber = null;
-    private String contactID = null;
-    private String messageContent = null;
-    private ArrayList<String> userClickCommands = null;
+    private String domain = "";
+    private String intent = "";
+    private String dialogPhase = "";
+    private String dialogPhaseDetail = "";
+    private String status = "";
+    private String ttsText = "";
+    private String systemText = "";
+    private ArrayList<String> ambiguityList = new ArrayList<>();
+    private String phoneID = "";
+    private String phoneNumber = "";
+    private String contactID = "";
+    private String messageContent = "";
+    private ArrayList<String> userClickCommands = new ArrayList<>();
 
     @Override
     public String toString() {

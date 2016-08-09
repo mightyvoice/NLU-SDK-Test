@@ -20,7 +20,7 @@ public class TextCallingDomain extends TextBaseDomain {
 
     public String phoneNumberID = "";
 
-    public ArrayList<String> userClickCommands = null;
+    public ArrayList<String> userClickCommands = new ArrayList<>();
 
     public TextCallingDomain(JSONArray _actionArray) {
         super(_actionArray);
@@ -40,7 +40,6 @@ public class TextCallingDomain extends TextBaseDomain {
             JSONObject curObject = curArray.optJSONObject(i);
             if(curObject.has("entries")){
                 JSONArray entries = curObject.optJSONArray("entries");
-                userClickCommands = new ArrayList<String>();
                 for(int j = 0; j < entries.length(); j++){
                     JSONObject entry = entries.optJSONObject(j);
                     if(entry.has("action")){

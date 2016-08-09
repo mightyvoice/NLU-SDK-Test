@@ -29,7 +29,7 @@ import org.json.JSONObject;
  */
 public class UserCommandRecognizer {
 
-    private static final String Host = "mtldev08.nuance.com";
+    private static final String Host = "mtldev02.nuance.com";
     private static final int Port = 443;
     private static final String AppId = "NMT_EVAL_TCL_20150814";
     public static final byte[] AppKey = { (byte) 0x89, (byte) 0xe9,
@@ -140,46 +140,53 @@ public class UserCommandRecognizer {
 //            Log.d(TAG, "ADK Subdialog Request Data: " + root.toString());
             DictionaryParam RequestInfo = new DictionaryParam("REQUEST_INFO", root);
 
-            Transaction dut;
+            Transaction dut = new Transaction(DEFAULT_APPSERVER_COMMAND, settings, new Transaction.Listener() {
 
-                dut = new Transaction(DEFAULT_APPSERVER_COMMAND, settings, new Transaction.Listener() {
-
-                    @Override
-                    public void onTransactionStarted(Transaction arg0) {
+                @Override
+                public void onTransactionStarted(Transaction arg0) {
 //                        Log.d(TAG, "Transaction Started...");
-                    }
+                }
 
-                    @Override
-                    public void onTransactionProcessingStarted(Transaction transaction) {
-                    }
+                @Override
+                public void onTransactionProcessingStarted(Transaction transaction) {
+                }
 
-                    @Override
-                    public void onTransactionResult(Transaction arg0, TransactionResult arg1,
-                                                    boolean arg2) {
+                @Override
+                public void onTransactionResult(Transaction arg0, TransactionResult arg1,
+                                                boolean arg2) {
 //                        Log.d(TAG, "Transaction Completed...");
-                        JSONObject results = null;
-                        try {
-                            results = new JSONObject(arg1.getContents().toString());
-                        } catch (JSONException e) {
-                            results = null;
-                        }
+                    JSONObject results = null;
+                    String resultString = arg1.getContents().toString();
+                    resultString = resultString.replaceAll("(,)(\\s+)(\\})", "$2$3");
+//                    resultString = resultString.replaceAll("\\;,", ",");
+//                    resultString = resultString.replaceAll("\\;", ",");
+                    resultString = resultString.replaceAll("( : )(\\w)", "$1\"$2");
+                    resultString = resultString.replaceAll("(,\\n)", "\"$1");
+                    Log.d("sss", resultString);
+                    try {
+                        results = new JSONObject(resultString);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    if(results != null) {
                         textServerResponse = new TextDialogManager(results).getTextServerResponse();
                         commandRecognizerListener.onGetTextRecognitionResult(textServerResponse);
                     }
+                }
 
-                    @Override
-                    public void onTransactionError(Transaction arg0, TransactionError arg1) {
-//                        Log.d(TAG, "Transaction Error...");
+                @Override
+                public void onTransactionError(Transaction arg0, TransactionError arg1) {
+                    Log.d("sss", "Command Upload Transaction Error...");
 //                        onGetDataError(arg0, arg1.toJSON());
-                    }
+                }
 
-                    @Override
-                    public void onTransactionIdGenerated(String s) {
-                    }
+                @Override
+                public void onTransactionIdGenerated(String s) {
+                }
 
-                }, 3000, true);
+            }, 3000, true);
 
-//            this.mCloudServices.addTransaction(dut, 1);
+            //            this.mCloudServices.addTransaction(dut, 1);
             cloudServices.addTransaction(dut, 1);
             dut.addParam(RequestInfo);
             dut.finish();
