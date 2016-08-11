@@ -213,7 +213,6 @@ public class CloudASRActivity extends AppCompatActivity
         if (_cloudServices != null)
             _cloudServices.release();
         _cloudServices = null;
-        _ttsService.close();
     }
 
     private RecogSpec createRecogSpec(String resultModeName) {
