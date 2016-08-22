@@ -162,9 +162,8 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
          });
 
 
-        // First, grammar set-up
+        // First, init cloud service
         final Handler uiHandler = new Handler();
-
         _workerThread = new WorkerThread();
         _workerThread.start();
         _workerThread.getHandler().post(new Runnable() {
@@ -185,6 +184,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
             }
         });
 
+        Log.d("upload ID", AppInfo.dataUploadUniqueID);
         startTextRecognitionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -192,7 +192,10 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                 startTextRecognitionButton.setEnabled(false);
                 CloudTextRecognizer cloudTextRecognizer = new CloudTextRecognizer(
                 AppInfo.dataUploadUniqueID,
+//                 "014366000908037",
                 AppInfo.applicationSessionID,
+//                        "faefwwagawgwag",
+//                        "32135253246236236",
                 textForRecognition,
                 new CloudTextRecognizer.TextRecognizerListener() {
                     @Override
@@ -237,7 +240,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                 speexPipe.connectAudioSource(recorder);
                 endpointerPipe.connectAudioSource(speexPipe);
 
-                cloudRecognizer.startRecognition(createCustomSpec(), endpointerPipe, new CloudRecognizer.Listener() {
+                cloudRecognizer.startRecognition(createAudioCustomSpec(), endpointerPipe, new CloudRecognizer.Listener() {
                     private int resultCount = 0;
 
                     @Override
@@ -360,7 +363,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
         }
     }
 
-    private RecogSpec createCustomSpec() {
+    private RecogSpec createAudioCustomSpec() {
         // Customize ASR command spec
         Data.Dictionary customSettings = new Data.Dictionary();
         customSettings.put("application", "TCL");
@@ -373,7 +376,8 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
         //Ji Li's setting
         // without the followings it still works fine
-        customSettings.put("uid", AppInfo.IMEInumber);
+//        customSettings.put("uid", AppInfo.IMEInumber);
+        customSettings.put("uid", AppInfo.dataUploadUniqueID);
         customSettings.put("nmaid", AppInfo.AppId);
         customSettings.put("application_name", getApplicationContext().getString(R.string.app_name));
         //enable or disable dialog, seems no effection

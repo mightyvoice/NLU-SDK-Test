@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.provider.ContactsContract;
 import android.os.Bundle;
 import android.telephony.TelephonyManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
@@ -91,6 +92,7 @@ public class MainActivity extends Activity {
         //get imei number for uid
         TelephonyManager telephonyManager = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
         AppInfo.IMEInumber = telephonyManager.getDeviceId();
+        Log.d("IMEI", String.valueOf(AppInfo.IMEInumber));
     }
 
     private void getAllContactList(){
