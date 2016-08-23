@@ -44,18 +44,15 @@ public class AppInfo {
 
     public static String IMEInumber;
     public static String applicationSessionID;
-    public static String dataUploadUniqueID = "3f69807e91794b32b5bf433ab60c7467";
-    public static String dataUploadReturnedCheckSum;
-
-    public static String nooo;
+    public static String dataUploadUniqueID = "fc57b47ca0664c1b987a5f69a2dc1c8f";
+    public static String dataUploadReturnedCheckSum = "1471990389689";
 
     private static byte[] toByteArray(String appKey)
     {
         String trimmedAppKey = appKey.trim();
         byte[] keyInBytes = new byte[trimmedAppKey.length()/2];
 
-        for (int i = 0; i < trimmedAppKey.length()/2; i++)
-        {
+        for (int i = 0; i < trimmedAppKey.length()/2; i++) {
             String key = trimmedAppKey.substring(i*2, i*2 + 2);
             keyInBytes[i] = (byte)Integer.parseInt(key, 16);
         }

@@ -6,6 +6,7 @@ import android.widget.Toast;
 
 import com.example.lj.asrttstest.R;
 import com.example.lj.asrttstest.info.AppInfo;
+import com.example.lj.asrttstest.text.dialog.TextServerResponse;
 import com.nuance.dragon.toolkit.cloudservices.DictionaryParam;
 import com.nuance.dragon.toolkit.cloudservices.Transaction;
 import com.nuance.dragon.toolkit.cloudservices.TransactionError;
@@ -45,7 +46,9 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
     /** The list of application grammars. */
     private List<Grammar> mGrammars = new ArrayList<Grammar>();
 
-    public String resultStatus = "";
+    private String resultStatus = "";
+    private String returnedUniqueID = "";
+    private String returnedCheckSum = "";
 
     /**
      * Gets the grammars.
@@ -68,15 +71,16 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
             this.mGrammars.clear();
     }
 
-    /**
-     * Instantiates a new data uploader cloud activity.
-     *
-     * @param c the application mContext
-     */
-    public DataUploaderCloudActivity( Context c )
-    {
+    DataUploadListener dataUploadListener;
+
+    public DataUploaderCloudActivity( Context c, DataUploadListener _listener) {
         super(c);
         initCloudServices();
+        dataUploadListener = _listener;
+    }
+
+    public interface DataUploadListener{
+        void onFinishDataUpload(String _status, String _uniqueID, String _checkSum);
     }
 
     /**
@@ -134,8 +138,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
                     }
 
                     //Ji's code to get the checksum from data uploading
-                    AppInfo.dataUploadReturnedCheckSum = "";
-                    AppInfo.dataUploadReturnedCheckSum = results
+                    returnedCheckSum = results
                             .optJSONObject("value")
                             .optJSONObject("result_list")
                             .optJSONArray("value")
@@ -145,6 +148,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
                             .optString("value");
                     Log.d("Returned Checksum: ", AppInfo.dataUploadReturnedCheckSum);
 
+                    dataUploadListener.onFinishDataUpload(resultStatus, returnedUniqueID, returnedCheckSum);
                 }
 
                 @Override
@@ -160,7 +164,7 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
             }, 3000, true);
 
         this.mCloudServices.addTransaction(dut, 1);
-        AppInfo.dataUploadUniqueID = mCloudServices.getUniqueID();
+        returnedUniqueID = mCloudServices.getUniqueID();
         Log.d("sss", "Unique ID: " + mCloudServices.getUniqueID());
         dut.addParam(p);
         if(p2 != null ) dut.addParam(p2);
@@ -618,7 +622,11 @@ class DataUploaderCloudActivity extends BaseCloudActivity {
      * @param result the server response
      */
     private void onDataUploadResult(Transaction t, JSONObject result) {
-
+//        try {
+//            Log.d("sss", "Upload response: "+result.toString(4));
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
     }
 
     /**

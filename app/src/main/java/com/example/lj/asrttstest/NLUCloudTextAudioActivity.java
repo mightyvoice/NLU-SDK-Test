@@ -81,6 +81,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
     private RecorderSource<AudioChunk> recorder;
     private SpeexEncoderPipe speexPipe;
     private EndPointerPipe endpointerPipe;
+    private Data.Sequence _grammarList, _checksumList;
 
     private WorkerThread _workerThread;
     private AudioDialogManager audioDialogManager;
@@ -118,7 +119,9 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
         cancelAudioRecognitionButton.setEnabled(false);
 
         ttsService = new TTSService(getApplicationContext());
+
         AppInfo.applicationSessionID = String.valueOf(UUID.randomUUID());
+        Log.d("sss", "App Session ID: "+AppInfo.applicationSessionID);
 
         Global.ambiguityList = new ArrayList<>();
         ambiguityListView = (ListView) findViewById(R.id.ambiguityListView);
@@ -133,23 +136,13 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                  Global.ambiguityList.clear();
                  ambiguityListAdapter.notifyDataSetChanged();
                  Global.ambiguityListChosenID = (int) id + 1;
-                 Log.d("sss", "Click " + new Integer((int) id).toString());
+//                 Log.d("sss", "Click " + new Integer((int) id).toString());
 
-//                 final UserCommandRecognizer userCommandRecognizer = new UserCommandRecognizer(AppInfo.dataUploadUniqueID,
-//                         AppInfo.applicationSessionID,
-//                         textServerResponse.getUserClickCommands().get(Global.ambiguityListChosenID-1),
-//                         new UserCommandRecognizer.CommandRecognizerListener() {
-//                             @Override
-//                             public void onGetTextRecognitionResult(TextServerResponse response) {
-//                                 textServerResponse = response;
-//                                 onGetDataResultFromTextRecognizer();
-//                             }
-//                         },
-//                         getApplicationContext());
+                 String chooseCMD = "SLOTS:GENERIC_ORDER:" + Global.ambiguityListChosenID.toString();
                  CloudTextRecognizer cloudTextRecognizer = new CloudTextRecognizer(
                          AppInfo.dataUploadUniqueID,
                          AppInfo.applicationSessionID,
-                         textServerResponse.getUserClickCommands().get(Global.ambiguityListChosenID-1),
+                         chooseCMD,
                          new CloudTextRecognizer.TextRecognizerListener() {
                              @Override
                              public void onGetTextRecognitionResult(TextServerResponse response) {
@@ -257,10 +250,9 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                             ///////// 1st result is the transcription
                         } else {
                             ///////// 2nd result is the ADK/NLU action
-                            Log.d("sss", result.getDictionary().toString());
+//                            Log.d("sss", result.getDictionary().toString());
 //                            onGetDataResultFromAudioRecognizer(result.getDictionary().toJSON());
                             onGetDataResultFromAudioRecognizer(result.getDictionary().toJSON());
-
                         }
                     }
 
@@ -376,8 +368,8 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
         //Ji Li's setting
         // without the followings it still works fine
-//        customSettings.put("uid", AppInfo.IMEInumber);
-        customSettings.put("uid", AppInfo.dataUploadUniqueID);
+        customSettings.put("uid", AppInfo.IMEInumber);
+//        customSettings.put("uid", AppInfo.dataUploadUniqueID);
         customSettings.put("nmaid", AppInfo.AppId);
         customSettings.put("application_name", getApplicationContext().getString(R.string.app_name));
         //enable or disable dialog, seems no effection
@@ -404,10 +396,22 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                 requestInfo.put("text", "");
                 requestInfo.put("appserver_data", appServerData);
 
-                // Pass grammar lists from DMA
+                ////Ji Li's code to add grammar_list
+//                _checksumList = new Data.Sequence();
+//                Data.Dictionary grammar_list = new Data.Dictionary();
+//                grammar_list.put("id", "contacts");
+//                grammar_list.put("type", "structured_content");
+//                grammar_list.put("structured_content_category", "contacts");
+//                grammar_list.put("checksum", AppInfo.dataUploadReturnedCheckSum);
+//                _checksumList.add(grammar_list);
 //                if (_checksumList != null && _checksumList.size() > 0) {
 //                    requestInfo.put("grammar_list", _checksumList);
 //                    appServerData.put("grammar_list", _checksumList);
+//                }
+//                try {
+//                    Log.d("sss", "REQUEST_INFO"+requestInfo.toJSON().toString(4));
+//                } catch (JSONException e) {
+//                    e.printStackTrace();
 //                }
 
                 List<DataParam> params = new ArrayList<DataParam>();
@@ -415,6 +419,11 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                 return params;
             }
         };
+        try {
+            Log.d("sss", "audio setting: "+retRecogSpec.getSettings().toJSON().toString(4));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         return retRecogSpec;
     }
 
@@ -425,7 +434,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
     private void startAdkSubdialog(Transaction.Listener mAdkSubdialogListener) {
 //        initCloudServices();
         try {
-            Log.e(TAG, "Inside startAdkSubdialog()");
+//            Log.e(TAG, "Inside startAdkSubdialog()");
             Dictionary settings = this.createCommandSettings(DEFAULT_APPSERVER_COMMAND, "nma_dm_main", getLanguage());
             Dictionary root = new Dictionary();
             Dictionary appserver_data = new Dictionary();
@@ -455,7 +464,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 //            Log.d(TAG, "ADK Subdialog Request Data: " + root.toString());
             DictionaryParam RequestInfo = new DictionaryParam("REQUEST_INFO", root);
 
-            Log.d(TAG, "Creating Start ADK Subdialog Transaction...");
+//            Log.d(TAG, "Creating Start ADK Subdialog Transaction...");
 
             Transaction dut;
 
@@ -466,7 +475,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
                     @Override
                     public void onTransactionStarted(Transaction arg0) {
-                        Log.d(TAG, "Transaction Started...");
+//                        Log.d(TAG, "Transaction Started...");
                     }
 
                     @Override
@@ -476,14 +485,14 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                     @Override
                     public void onTransactionResult(Transaction arg0, TransactionResult arg1,
                                                     boolean arg2) {
-                        Log.d(TAG, "Transaction Completed...");
+//                        Log.d(TAG, "Transaction Completed...");
                         JSONObject results = arg1.getContents().toJSON();
                         onGetDataResultFromAudioRecognizer(results);
                     }
 
                     @Override
                     public void onTransactionError(Transaction arg0, TransactionError arg1) {
-                        Log.d(TAG, "Transaction Error...");
+//                        Log.d(TAG, "Transaction Error...");
 //                        onGetDataError(arg0, arg1.toJSON());
                     }
 
@@ -500,7 +509,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
         } catch (Exception e) {
             //Log.e(TAG, e.getMessage());
-            Log.e(TAG, "Exception thrown in RecognizerCloudActivity.startAdkSubdialog()");
+//            Log.e(TAG, "Exception thrown in RecognizerCloudActivity.startAdkSubdialog()");
             e.printStackTrace();
         }
     }
@@ -529,7 +538,8 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
         settings.put("audio_source", "SpeakerAndMicrophone");
 
         //Ji Li's code
-        settings.put("uid", AppInfo.IMEInumber);
+//        settings.put("uid", AppInfo.IMEInumber);
+        settings.put("uid", AppInfo.dataUploadUniqueID);
         settings.put("nlps_use_adk", 1);
         settings.put("application", "TCL");
         settings.put("dictation_type", "gens_dm_main");
@@ -548,7 +558,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
     private void onGetDataResultFromAudioRecognizer(JSONObject result) {
 //        try {
 //            sendJsonToEmail(result.toString(4));
-////            Log.d("sss", result.toString(4));
+//            Log.d("sss", "audio NLU response: "+result.toString(4));
 //        } catch (JSONException e) {
 //            e.printStackTrace();
 //        }
@@ -565,7 +575,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                     = new AudioCallingDomain(getApplicationContext(), audioDialogManager.getActions(), audioDialogManager.getTtsText());
             callingDomain.parseAllUsefulInfo();
             phoneNumber = callingDomain.phoneNumber;
-            Log.d("sss", audioDialogManager.getDialogPhaseDetail());
+//            Log.d("sss", audioDialogManager.getDialogPhaseDetail());
             textRecognizedView.setText(audioDialogManager.getDialogPhaseDetail());
 
             //if there is ambiguty
@@ -588,9 +598,9 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                     = new AudioMessageDomain(getApplicationContext(), audioDialogManager.getActions(), audioDialogManager.getTtsText());
             audioMessageDomain.parseAllUsefulInfo();
             phoneNumber = audioMessageDomain.getPhoneNumber();
-            Log.d("sss", phoneNumber);
-            Log.d("sss", audioMessageDomain.getMessageContent());
-            Log.d("sss", audioDialogManager.getDialogPhaseDetail());
+//            Log.d("sss", phoneNumber);
+//            Log.d("sss", audioMessageDomain.getMessageContent());
+//            Log.d("sss", audioDialogManager.getDialogPhaseDetail());
             textRecognizedView.setText(audioDialogManager.getDialogPhaseDetail());
 
             //if there is ambiguity
@@ -600,7 +610,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
 
             if (audioDialogManager.getIntent().equals("display")) {
                 Global.ambiguityList.clear();
-                Log.d("sss", "message: " + audioMessageDomain.getMessageContent());
+//                Log.d("sss", "message: " + audioMessageDomain.getMessageContent());
                 Global.ambiguityList.add(audioMessageDomain.getMessageContent());
                 ambiguityListAdapter.notifyDataSetChanged();
             }
@@ -619,7 +629,7 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
     private String getTimeZone() {
         TimeZone tz = TimeZone.getDefault();
 
-        Log.d(TAG, "Device timezone is: " + tz.getID());
+//        Log.d(TAG, "Device timezone is: " + tz.getID());
         return tz.getID();    //tz.getDisplayName();
     }
 
@@ -627,13 +637,13 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
         String format = "yyyy-MM-dd'T'HH:mm:ssZ";
 
         TimeZone tz = TimeZone.getDefault();    //.getTimeZone("UTC");
-        Log.d(TAG, "Device timezone is: " + tz.getID());    //tz.getDisplayName());
+//        Log.d(TAG, "Device timezone is: " + tz.getID());    //tz.getDisplayName());
 
         DateFormat dateFormat = new SimpleDateFormat(format, Locale.getDefault());
         dateFormat.setTimeZone(tz);
 
         Date date = new Date();
-        Log.d(TAG, "Device timestamp is: " + dateFormat.format(date));
+//        Log.d(TAG, "Device timestamp is: " + dateFormat.format(date));
 
         return dateFormat.format(date);
     }

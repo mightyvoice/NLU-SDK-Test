@@ -842,14 +842,15 @@ public class HttpAsrClient {
                                         .getJSONObject("nbest_text")
                                         .getJSONArray("transcriptions")
                                         .getString(0) );
-                            else
-                                write(json.toString(4));
+                            else {
+//                                write(json.toString(4));
+                            }
 
                         }
                         else if(json.has("final_response") && json.getInt("final_response") == 1) {
                             if( json.has("transcriptions") ) {
                                 write("Final Response: " + json.getJSONArray("transcriptions").getString(0));
-//                                write("Final JSON Response: " + json.toString(4));
+                                write("Final JSON Response: " + json.toString(4));
 
                                 //Ji's code
                                 serverResponseJSON = json;

@@ -15,11 +15,11 @@ public class TextDialogManager extends TextBaseDialogManager {
     private TextServerResponse textServerResponse;
 
     public TextDialogManager(JSONObject input){
-        try {
-            Log.d("sss", input.toString(4));
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            Log.d("sss", input.toString(4));
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
         textServerResponse = null;
         textServerResponse = parseTextServerResponse(input);
         Log.d("sss", "##############################\n"+

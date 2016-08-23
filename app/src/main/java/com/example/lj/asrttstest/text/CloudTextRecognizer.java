@@ -29,7 +29,6 @@ public class CloudTextRecognizer {
     private static final String TextAppId = "TCL_TESTING_20160307";
     private final static String TextAppKey = "601c876b563065fb5e1b39f7b15dda6a8052c3c63b602bec22a7aec1ead93ea3434d596d761234e9a9771763b14412ea6551ed2c17a4f71839af9aac959e1566";
 
-
     private static final int TextPort = 443;
     private final static boolean UseTLS = true;
     private final static String Topic = "nma_dm_main";

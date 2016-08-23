@@ -6,11 +6,13 @@ import android.provider.ContactsContract;
 import android.support.v7.app.AppCompatActivity;
 import com.example.lj.asrttstest.R;
 import com.example.lj.asrttstest.info.AllContactInfo;
+import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.info.ContactInfo;
 import com.nuance.dragon.toolkit.data.Data;
 
 import 	android.content.ContentResolver;
 import android.util.Log;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -29,11 +31,20 @@ public class ContactsActivity extends AppCompatActivity {
      */
     private final static String TAG = "ContactsActivity";
     private DataUploaderCloudActivity dataUploader;
+    private String uploadResult = "";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_cloud_asr);
+
+        Button startButton = (Button) findViewById(R.id.startCloudRecognitionButton);
+        Button stopButton = (Button) findViewById(R.id.stopCloudRecognitionButton);
+        Button cancelButton = (Button) findViewById(R.id.cancelCloudRecognitionButton);
+
+        startButton.setEnabled(false);
+        stopButton.setEnabled(false);
+        cancelButton.setEnabled(false);
 
         getAllContactList();
         try {
@@ -50,13 +61,19 @@ public class ContactsActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        dataUploader = new DataUploaderCloudActivity(this);
+        dataUploader = new DataUploaderCloudActivity(this,
+                new DataUploaderCloudActivity.DataUploadListener() {
+                    @Override
+                    public void onFinishDataUpload(String _status, String _uniqueID, String _checkSum) {
+                        resultEditText.setText("Finish Data Upload: "+_status);
+                        AppInfo.dataUploadUniqueID  = _uniqueID;
+                        AppInfo.dataUploadReturnedCheckSum = _checkSum;
+                        uploadResult = _status;
+                        Log.d("sss", "upload result: "+uploadResult);
+                    }
+                });
+
         dataUploader.TclUploadData(AllContactInfo.allContactJsonObject, null, null);
-        Log.d("haha", dataUploader.resultStatus);
-        if(dataUploader.resultStatus.equalsIgnoreCase("success")) {
-            Toast.makeText(this, "Upload Success!", Toast.LENGTH_SHORT).show();
-            this.finish();
-        }
     }
 
     private void getAllContactList(){
