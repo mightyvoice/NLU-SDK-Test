@@ -117,9 +117,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
     private CloudServices mMixCloudServices = null;
     private CloudRecognizer mMixCloudRecognizer = null;
 
-    /** for text recognizer **/
-    private CloudTextRecognizer mCloudTextRecognizer = null;
-
     /** A flag identifying if nlu is enabled for a transaction. */
     private boolean mNluEnabled = true;
 
@@ -168,7 +165,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         AppInfo.applicationSessionID = String.valueOf(UUID.randomUUID());
         AppInfo.mixApplicationSessionID = String.valueOf(UUID.randomUUID());
 
-        //only array works, arrayList does not work here
         Global.ambiguityList = new ArrayList<>();
         ambiguityListView = (ListView) findViewById(R.id.ambiguityListView);
         ambiguityListAdapter = new ArrayAdapter(this,
@@ -218,32 +214,30 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                 stopRecognitionButton.setEnabled(true);
                 cancelButton.setEnabled(true);
 
-//                Global.ambiguityList.clear();
-//                ambiguityListAdapter.notifyDataSetChanged();
-//
-//                _recorder = new MicrophoneRecorderSource(AudioType.PCM_16k);
-//                _speexPipe = new SpeexEncoderPipe();
-//                _endpointerPipe = new EndPointerPipe(new SpeechDetectionListener() {
-//                    @Override
-//                    public void onStartOfSpeech() {
-//                        resultEditText.setText("Start of Speech...");
-//                    }
-//
-//                    @Override
-//                    public void onEndOfSpeech() {
-//                        resultEditText.setText("End of Speech...");
-//
+                Global.ambiguityList.clear();
+                ambiguityListAdapter.notifyDataSetChanged();
+
+                _recorder = new MicrophoneRecorderSource(AudioType.PCM_16k);
+                _speexPipe = new SpeexEncoderPipe();
+                _endpointerPipe = new EndPointerPipe(new SpeechDetectionListener() {
+                    @Override
+                    public void onStartOfSpeech() {
+                        resultEditText.setText("Start of Speech...");
+                    }
+
+                    @Override
+                    public void onEndOfSpeech() {
+                        resultEditText.setText("End of Speech...");
 //                        mCloudRecognizer.processResult();
-//                        stopRecording();
-//                    }
-//                });
+                        stopRecording();
+                    }
+                });
 //
 //                // Start recording and recognition
-//                _recorder.startRecording();
-//                _speexPipe.connectAudioSource(_recorder);
-//                _endpointerPipe.connectAudioSource(_speexPipe);
+                _recorder.startRecording();
+                _speexPipe.connectAudioSource(_recorder);
+                _endpointerPipe.connectAudioSource(_speexPipe);
 
-                startTextRecognition("Make a phone call");
 
 //                mCloudRecognizer.startRecognition(createCustomSpec(), _endpointerPipe, new CloudRecognizer.Listener() {
 //                    private int resultCount = 0;
@@ -294,54 +288,54 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 //                    }
 //                });
 
-//                mMixCloudRecognizer.startRecognition(createMixRecogSpec(DEFAULT_DICTATION_TYPE,
-//                        getLanguage(), MIX_CONTEXT, null),
-//                        _endpointerPipe, new CloudRecognizer.Listener() {
-//                    private int resultCount = 0;
-//                    @Override
-//                    public void onResult(CloudRecognitionResult result) {
-//                        Log.d("sss", "mix NLU Cloud Recognition succeeded!");
-//                        stopRecording();
-//                        resultCount++;
-//                        startRecognitionButton.setEnabled(true);
-//                        stopRecognitionButton.setEnabled(false);
-//                        cancelButton.setEnabled(false);
-//
-//                        if (resultCount == 1) {
-//                            ///////// 1st result is the transcription
-//
-//                        } else {
-//                            ///////// 2nd result is the ADK/NLU action
-//                            String readableResult = "Error";
-//                            try {
-//                                readableResult = result.getDictionary().toJSON().toString(4);
-//                            } catch (JSONException e) {
-//                                e.printStackTrace();
-//                            }
-//                            Log.d("sss", readableResult);
-//                            sendJsonToEmail(readableResult);
-////                            onGetDataResult(result.getDictionary().toJSON());
-//                        }
-//                    }
-//
-//                    @Override
-//                    public void onError(CloudRecognitionError error)
-//                    {
-//                        Logger.debug(this, "NLU Cloud Recognition failed!");
-//                        Log.d("sss", error.toString());
-//                        stopRecording();
-//
-//                        startRecognitionButton.setEnabled(true);
-//                        stopRecognitionButton.setEnabled(false);
-//                        cancelButton.setEnabled(false);
-//
-//                        resultEditText.setText("ERROR");
-//                    }
-//
-//                    @Override
-//                    public void onTransactionIdGenerated(String transactionId) {
-//                    }
-//                });
+                mMixCloudRecognizer.startRecognition(createMixRecogSpec(DEFAULT_DICTATION_TYPE,
+                        getLanguage(), MIX_CONTEXT, null),
+                        _endpointerPipe, new CloudRecognizer.Listener() {
+                    private int resultCount = 0;
+                    @Override
+                    public void onResult(CloudRecognitionResult result) {
+                        Log.d("sss", "mix NLU Cloud Recognition succeeded!");
+                        stopRecording();
+                        resultCount++;
+                        startRecognitionButton.setEnabled(true);
+                        stopRecognitionButton.setEnabled(false);
+                        cancelButton.setEnabled(false);
+
+                        if (resultCount == 1) {
+                            ///////// 1st result is the transcription
+
+                        } else {
+                            ///////// 2nd result is the ADK/NLU action
+                            String readableResult = "Error";
+                            try {
+                                readableResult = result.getDictionary().toJSON().toString(4);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                            Log.d("sss", readableResult);
+                            sendJsonToEmail(readableResult);
+//                            onGetDataResult(result.getDictionary().toJSON());
+                        }
+                    }
+
+                    @Override
+                    public void onError(CloudRecognitionError error)
+                    {
+                        Logger.debug(this, "NLU Cloud Recognition failed!");
+                        Log.d("sss", error.toString());
+                        stopRecording();
+
+                        startRecognitionButton.setEnabled(true);
+                        stopRecognitionButton.setEnabled(false);
+                        cancelButton.setEnabled(false);
+
+                        resultEditText.setText("ERROR");
+                    }
+
+                    @Override
+                    public void onTransactionIdGenerated(String transactionId) {
+                    }
+                });
             }
         });
 
@@ -494,7 +488,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
 //        initCloudServices();
         try {
             Log.e(TAG, "Inside startAdkSubdialog()");
-            Dictionary settings = this.createCommandSettings(DEFAULT_APPSERVER_COMMAND, "nma_dm_main", getLanguage());
+            Dictionary settings = this.createSubdialogCommandSettings(DEFAULT_APPSERVER_COMMAND, "nma_dm_main", getLanguage());
             Dictionary root = new Dictionary();
             Dictionary appserver_data = new Dictionary();
 
@@ -584,7 +578,7 @@ public class NLUCloudASRActivity extends AppCompatActivity {
      * @param language the dictation language
      * @return the command settings dictionary
      */
-    private Dictionary createCommandSettings(String commandName, String type, String language) {
+    private Dictionary createSubdialogCommandSettings(String commandName, String type, String language) {
         Data.Dictionary settings = new Data.Dictionary();
 
         settings.put("command", commandName);
@@ -688,38 +682,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         }
     }
 
-    protected String getTimeZone() {
-        TimeZone tz = TimeZone.getDefault();
-
-        Log.d(TAG, "Device timezone is: " + tz.getID());
-        return tz.getID();	//tz.getDisplayName();
-    }
-
-    protected String getCurrentTime() {
-        String format = "yyyy-MM-dd'T'HH:mm:ssZ";
-
-        TimeZone tz = TimeZone.getDefault();	//.getTimeZone("UTC");
-        Log.d(TAG, "Device timezone is: " + tz.getID());	//tz.getDisplayName());
-
-        DateFormat dateFormat = new SimpleDateFormat(format, Locale.getDefault());
-        dateFormat.setTimeZone(tz);
-
-        Date date = new Date();
-        Log.d(TAG, "Device timestamp is: " + dateFormat.format(date));
-
-        return dateFormat.format(date);
-    }
-
-    protected String getLanguage() {
-        if( mLanguage != null )
-            return mLanguage;
-
-        return DEFAULT_LANGUAGE;
-    }
-
-    void setLanguage(String language) {
-        mLanguage = language;
-    }
 
     void releaseCloudServices() {
 
@@ -737,10 +699,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         if (mMixCloudRecognizer!= null) {
             mMixCloudRecognizer.cancel();
             mMixCloudRecognizer = null;
-        }
-        if (mCloudTextRecognizer != null) {
-            mCloudTextRecognizer.cancel();
-            mCloudTextRecognizer = null;
         }
         if(mCloudRecognizer != null){
             mCloudRecognizer.cancel();
@@ -763,7 +721,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
                     AppInfo.mixAppKey,
                     AudioType.SPEEX_WB,
                     AudioType.SPEEX_WB);
-//            NMTContext _context = LayoutInflater.Factory2.createNMTContextAndroid(mContext);
 
         if( mixConfig != null ) {
             Log.d(TAG, "Mix Config: " + mixConfig.toString());
@@ -781,7 +738,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         }
         if(mCloudServices != null){
             mCloudRecognizer = new CloudRecognizer(mCloudServices);
-            mCloudTextRecognizer = new CloudTextRecognizer(mCloudServices);
         }
     }
 
@@ -907,11 +863,6 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         Integer X = x;
         return X.toString();
     }
-    private void startTextRecognition(String text) {
-        Log.d(TAG, "startTextRecognition: " + text);
-        RecogSpec recogSpec = createRecogSpec(getDictationType(), getLanguage(), "TCL", text, null);
-        mCloudTextRecognizer.startRecognition(recogSpec, recognizerTextListener);
-    }
 
     private String getDictationType(){
         return DEFAULT_DICTATION_TYPE;
@@ -996,6 +947,38 @@ public class NLUCloudASRActivity extends AppCompatActivity {
         return DEFAULT_APPSERVER_COMMAND;
     }
 
+    protected String getTimeZone() {
+        TimeZone tz = TimeZone.getDefault();
+
+        Log.d(TAG, "Device timezone is: " + tz.getID());
+        return tz.getID();	//tz.getDisplayName();
+    }
+
+    protected String getCurrentTime() {
+        String format = "yyyy-MM-dd'T'HH:mm:ssZ";
+
+        TimeZone tz = TimeZone.getDefault();	//.getTimeZone("UTC");
+        Log.d(TAG, "Device timezone is: " + tz.getID());	//tz.getDisplayName());
+
+        DateFormat dateFormat = new SimpleDateFormat(format, Locale.getDefault());
+        dateFormat.setTimeZone(tz);
+
+        Date date = new Date();
+        Log.d(TAG, "Device timestamp is: " + dateFormat.format(date));
+
+        return dateFormat.format(date);
+    }
+
+    protected String getLanguage() {
+        if( mLanguage != null )
+            return mLanguage;
+
+        return DEFAULT_LANGUAGE;
+    }
+
+    void setLanguage(String language) {
+        mLanguage = language;
+    }
 
 
 
