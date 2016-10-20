@@ -5,10 +5,13 @@ package com.example.lj.asrttstest.text;
  */
 
 import android.os.AsyncTask;
+import android.util.Log;
 
 import com.example.lj.asrttstest.text.dialog.TextDialogManager;
 import com.example.lj.asrttstest.text.dialog.TextServerResponse;
 import com.example.lj.asrttstest.text.http.HttpAsrClient;
+
+import org.json.JSONException;
 import org.json.JSONObject;
 
 
@@ -19,10 +22,18 @@ import org.json.JSONObject;
  */
 public class CloudTextRecognizer {
 
-    private static final String TextHost = "mtldev08.nuance.com";
+//    private static final String TextHost = "mtldev08.nuance.com";
+//    private static final int TextPort = 443;
+//    private static final String TextAppId = "NMT_EVAL_TCL_20150814";
+//    private final static String TextAppKey = "89e9b1b619dfc7d682237e701da7ada48316f675f73c5ecd23a41fc40782bc212ed3562022c23e75214dcb9010286c23afe100e00d4464873e004d1f4c8a5883";
+//    private final static boolean UseTLS = true;
+//    private final static String Topic = "nma_dm_main";
+//    private final static String LangCode = "eng-USA";
+
+    private static final String TextHost = "mtldev04.nuance.com";
     private static final int TextPort = 443;
-    private static final String TextAppId = "NMT_EVAL_TCL_20150814";
-    private final static String TextAppKey = "89e9b1b619dfc7d682237e701da7ada48316f675f73c5ecd23a41fc40782bc212ed3562022c23e75214dcb9010286c23afe100e00d4464873e004d1f4c8a5883";
+    private static final String TextAppId = "TCL_TESTING_20160307";
+    private final static String TextAppKey = "601c876b563065fb5e1b39f7b15dda6a8052c3c63b602bec22a7aec1ead93ea3434d596d761234e9a9771763b14412ea6551ed2c17a4f71839af9aac959e1566";
     private final static boolean UseTLS = true;
     private final static String Topic = "nma_dm_main";
     private final static String LangCode = "eng-USA";
@@ -98,6 +109,11 @@ public class CloudTextRecognizer {
         protected void onPostExecute(String result)
         {
             super.onPostExecute(result);
+            try {
+                Log.d("sss", asrClient.serverResponseJSON.toString(4));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
             TextDialogManager textDialogManager = new TextDialogManager(asrClient.serverResponseJSON);
             serverResponse = textDialogManager.getTextServerResponse();
             textRecognizerListener.onGetTextRecognitionResult(serverResponse);
