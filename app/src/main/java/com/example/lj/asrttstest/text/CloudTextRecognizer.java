@@ -4,9 +4,12 @@ package com.example.lj.asrttstest.text;
  * Created by lj on 16/6/29.
  */
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.example.lj.asrttstest.info.AppInfo;
 import com.example.lj.asrttstest.text.dialog.TextDialogManager;
 import com.example.lj.asrttstest.text.dialog.TextServerResponse;
 import com.example.lj.asrttstest.text.http.HttpAsrClient;
@@ -39,7 +42,6 @@ public class CloudTextRecognizer {
     private final static String LangCode = "eng-USA";
 
     private HttpAsrClient asrClient = null;
-    private JSONObject serverResponseJSON;
     private String dataUploadReturnUniqueID;
     private String applicationSessionID;
 
@@ -71,7 +73,6 @@ public class CloudTextRecognizer {
                     Topic,
                     LangCode);
         }
-        serverResponseJSON = null;
         new TextRecognitionAsyncTask().execute();
     }
 
@@ -91,33 +92,38 @@ public class CloudTextRecognizer {
     private class TextRecognitionAsyncTask extends AsyncTask<String, Integer, String> {
 
         @Override
-        protected void onPreExecute()
-        {
+        protected void onPreExecute() {
             super.onPreExecute();
             serverResponse = null;
         }
 
         @Override
         protected String doInBackground(String... params) {
-            if(textForNLU != null && !textForNLU.equals("")){
+            if (textForNLU != null && !textForNLU.equals("")) {
                 startTextRecognition();
             }
             return null;
         }
 
         @Override
-        protected void onPostExecute(String result)
-        {
+        protected void onPostExecute(String result) {
             super.onPostExecute(result);
             try {
                 Log.d("sss", asrClient.serverResponseJSON.toString(4));
             } catch (JSONException e) {
                 e.printStackTrace();
             }
+            try {
+                AppInfo.textNluReturnedJSON = new JSONObject(asrClient.serverResponseJSON.toString());
+            } catch (JSONException e) {
+                e.printStackTrace();
+                AppInfo.textNluReturnedJSON = null;
+            }
             TextDialogManager textDialogManager = new TextDialogManager(asrClient.serverResponseJSON);
             serverResponse = textDialogManager.getTextServerResponse();
             textRecognizerListener.onGetTextRecognitionResult(serverResponse);
         }
     }
+
 
 }

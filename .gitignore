@@ -454,3 +454,5 @@ captures/
 .idea/workspace.xml
 .idea/libraries
 ##########Android development ##########
+
+.DS_Store

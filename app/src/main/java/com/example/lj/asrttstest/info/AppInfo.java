@@ -1,5 +1,7 @@
 package com.example.lj.asrttstest.info;
 
+import org.json.JSONObject;
+
 /**
  * Created by lj on 16/6/14.
  */
@@ -57,6 +59,8 @@ public class AppInfo {
     public static String applicationSessionID;
     public static String dataUploadReturnedCheckSum = "";
     public static String dataUploadUniqueID = "48db6688f0d54ced8401697ab54f5a5c";
+
+    public static JSONObject textNluReturnedJSON;
 
     public static final String mixHost = "nmsp.dev.nuance.com";
     public static final int mixPort = 443;

@@ -200,6 +200,11 @@ public class NLUCloudTextAudioActivity extends AppCompatActivity {
                         textServerResponse = response;
                         onGetDataResultFromTextRecognizer();
                         startTextRecognitionButton.setEnabled(true);
+                        try {
+                            sendJsonToEmail(AppInfo.textNluReturnedJSON.toString(4));
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
                     }
                 });
             }
